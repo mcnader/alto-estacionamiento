@@ -1,0 +1,708 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gestión de Estacionamiento</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f172a; --panel: #1e293b; --panel2: #334155;
+      --text: #f1f5f9; --muted: #94a3b8; --border: #334155;
+      --primary: #3b82f6; --primary-hover: #2563eb;
+      --success: #10b981; --danger: #ef4444; --warning: #f59e0b;
+    }
+    body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; background: #f1f5f9; color: #0f172a; min-height: 100vh; }
+    button { cursor: pointer; font: inherit; }
+    input, select, textarea { font: inherit; }
+
+    /* Login */
+    #login-view { min-height: 100vh; display: grid; place-items: center; background: linear-gradient(135deg, #1e3a8a, #0f172a); }
+    .login-card { background: white; padding: 2.5rem; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); width: 100%; max-width: 400px; }
+    .login-card h1 { font-size: 1.5rem; margin-bottom: 0.25rem; color: #0f172a; }
+    .login-card p { color: #64748b; margin-bottom: 1.5rem; font-size: 0.875rem; }
+    .field { margin-bottom: 1rem; }
+    .field label { display: block; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.375rem; color: #334155; }
+    .field input, .field select, .field textarea { width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; transition: border-color 0.15s; }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
+    .btn { padding: 0.625rem 1rem; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 600; transition: background 0.15s; }
+    .btn:hover { background: var(--primary-hover); }
+    .btn-block { width: 100%; }
+    .btn-sm { padding: 0.375rem 0.625rem; font-size: 0.8125rem; }
+    .btn-secondary { background: #e2e8f0; color: #0f172a; }
+    .btn-secondary:hover { background: #cbd5e1; }
+    .btn-danger { background: var(--danger); }
+    .btn-danger:hover { background: #dc2626; }
+    .btn-success { background: var(--success); }
+    .btn-success:hover { background: #059669; }
+    .error { color: var(--danger); font-size: 0.875rem; margin-top: 0.5rem; min-height: 1.25rem; }
+
+    /* App layout */
+    #app-view { display: none; min-height: 100vh; }
+    .app-shell { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+    .sidebar { background: var(--bg); color: var(--text); padding: 1.25rem 0; }
+    .sidebar-brand { padding: 0 1.25rem 1.25rem; border-bottom: 1px solid var(--border); margin-bottom: 1rem; }
+    .sidebar-brand h2 { font-size: 1.125rem; }
+    .sidebar-brand small { color: var(--muted); font-size: 0.75rem; }
+    .nav-item { display: block; width: 100%; text-align: left; padding: 0.75rem 1.25rem; background: none; border: none; color: var(--text); border-left: 3px solid transparent; }
+    .nav-item:hover { background: rgba(255,255,255,0.05); }
+    .nav-item.active { background: rgba(59,130,246,0.15); border-left-color: var(--primary); }
+    .nav-item.hidden { display: none; }
+
+    .main { display: flex; flex-direction: column; min-width: 0; }
+    .topbar { background: white; padding: 1rem 1.5rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+    .topbar h1 { font-size: 1.25rem; }
+    .user-chip { display: flex; align-items: center; gap: 0.75rem; }
+    .user-chip span { font-size: 0.875rem; color: #475569; }
+    .content { padding: 1.5rem; flex: 1; }
+
+    /* Cards */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    .stat-card { background: white; border-radius: 12px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+    .stat-card .label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 0.375rem; }
+    .stat-card .value { font-size: 1.75rem; font-weight: 700; color: #0f172a; }
+    .stat-card.primary { background: var(--primary); color: white; }
+    .stat-card.primary .label { color: rgba(255,255,255,0.85); }
+    .stat-card.primary .value { color: white; }
+    .stat-card.success { background: var(--success); color: white; }
+    .stat-card.success .label { color: rgba(255,255,255,0.85); }
+    .stat-card.success .value { color: white; }
+
+    .panel { background: white; border-radius: 12px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.06); margin-bottom: 1rem; }
+    .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem; }
+    .panel-header h2 { font-size: 1.125rem; }
+    .panel-header .actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+    /* Tables */
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 0.875rem; }
+    th { background: #f8fafc; font-weight: 600; color: #475569; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    tbody tr:hover { background: #f8fafc; }
+    .table-wrap { overflow-x: auto; }
+    .table-actions { display: flex; gap: 0.375rem; }
+
+    .badge { display: inline-block; padding: 0.125rem 0.5rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+    .badge-admin { background: #dbeafe; color: #1e40af; }
+    .badge-encargado { background: #d1fae5; color: #065f46; }
+    .badge-positive { background: #d1fae5; color: #065f46; }
+    .badge-negative { background: #fee2e2; color: #991b1b; }
+
+    /* Modal */
+    .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.6); z-index: 100; align-items: center; justify-content: center; padding: 1rem; }
+    .modal-backdrop.show { display: flex; }
+    .modal { background: white; border-radius: 12px; padding: 1.5rem; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
+    .modal h3 { margin-bottom: 1rem; }
+    .modal-actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem; }
+
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .filters { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: end; margin-bottom: 1rem; }
+    .filters .field { margin: 0; min-width: 140px; }
+    .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: #0f172a; color: white; padding: 0.75rem 1.25rem; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); transform: translateY(120%); transition: transform 0.25s; z-index: 200; }
+    .toast.show { transform: translateY(0); }
+    .toast.error { background: var(--danger); }
+    .empty { text-align: center; padding: 2rem; color: #94a3b8; }
+
+    @media (max-width: 768px) {
+      .app-shell { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .sidebar.open { display: block; position: fixed; inset: 0; z-index: 50; }
+      .row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Login -->
+<div id="login-view">
+  <form class="login-card" id="login-form">
+    <h1>Gestión de Estacionamiento</h1>
+    <p>Iniciá sesión para continuar</p>
+    <div class="field">
+      <label>Usuario</label>
+      <input type="text" id="login-username" required autocomplete="username" />
+    </div>
+    <div class="field">
+      <label>Contraseña</label>
+      <input type="password" id="login-password" required autocomplete="current-password" />
+    </div>
+    <button type="submit" class="btn btn-block">Ingresar</button>
+    <div class="error" id="login-error"></div>
+    <p style="font-size:0.75rem;color:#94a3b8;margin-top:1rem;text-align:center">
+      Usuario inicial: <strong>admin</strong> / <strong>admin123</strong>
+    </p>
+  </form>
+</div>
+
+<!-- App -->
+<div id="app-view">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <h2>ParkingSys</h2>
+        <small>Gestión integral</small>
+      </div>
+      <nav>
+        <button class="nav-item" data-view="dashboard">Panel</button>
+        <button class="nav-item" data-view="clientes">Clientes</button>
+        <button class="nav-item" data-view="pagos">Pagos</button>
+        <button class="nav-item" data-view="cuenta">Cuenta corriente</button>
+        <button class="nav-item" data-view="resumen">Resumen</button>
+        <button class="nav-item admin-only" data-view="encargados">Encargados</button>
+        <button class="nav-item admin-only" data-view="tarifas">Tarifas</button>
+        <button class="nav-item admin-only" data-view="sucursales">Sucursales</button>
+      </nav>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <h1 id="view-title">Panel</h1>
+        <div class="user-chip">
+          <span id="user-info"></span>
+          <button class="btn btn-secondary btn-sm" id="logout-btn">Salir</button>
+        </div>
+      </header>
+      <main class="content" id="content"></main>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-backdrop">
+  <div class="modal" id="modal"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const API = '/api';
+let currentUser = null;
+let cache = { sucursales: [], tarifas: [], usuarios: [], clientes: [] };
+
+/* === HTTP helpers === */
+async function api(path, opts = {}) {
+  const res = await fetch(API + path, {
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    ...opts,
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  if (res.status === 401) {
+    showLogin();
+    throw new Error('No autenticado');
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Error');
+  return data;
+}
+
+function toast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.className = 'toast ' + type, 2500);
+}
+function fmt(n) { return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n || 0); }
+function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+
+/* === Auth === */
+function showLogin() {
+  document.getElementById('login-view').style.display = 'grid';
+  document.getElementById('app-view').style.display = 'none';
+  currentUser = null;
+}
+function showApp() {
+  document.getElementById('login-view').style.display = 'none';
+  document.getElementById('app-view').style.display = 'block';
+  document.getElementById('user-info').textContent = `${currentUser.nombre} (${currentUser.rol})`;
+  document.querySelectorAll('.admin-only').forEach(el => {
+    el.classList.toggle('hidden', currentUser.rol !== 'admin');
+  });
+  loadCommonData().then(() => navigate('dashboard'));
+}
+
+document.getElementById('login-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const username = document.getElementById('login-username').value;
+  const password = document.getElementById('login-password').value;
+  const err = document.getElementById('login-error');
+  err.textContent = '';
+  try {
+    currentUser = await api('/auth/login', { method: 'POST', body: { username, password } });
+    showApp();
+  } catch (e) {
+    err.textContent = e.message;
+  }
+});
+document.getElementById('logout-btn').addEventListener('click', async () => {
+  await api('/auth/logout', { method: 'POST' });
+  showLogin();
+});
+
+async function loadCommonData() {
+  cache.sucursales = await api('/sucursales');
+  cache.tarifas = await api('/tarifas');
+  cache.clientes = await api('/clientes');
+  if (currentUser.rol === 'admin') {
+    cache.usuarios = await api('/usuarios');
+  }
+}
+
+/* === Navigation === */
+const titles = {
+  dashboard: 'Panel', clientes: 'Clientes', pagos: 'Pagos', cuenta: 'Cuenta corriente',
+  resumen: 'Resumen', encargados: 'Encargados', tarifas: 'Tarifas', sucursales: 'Sucursales',
+};
+function navigate(view) {
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.view === view));
+  document.getElementById('view-title').textContent = titles[view] || view;
+  views[view]?.();
+}
+document.querySelectorAll('.nav-item').forEach(el => {
+  el.addEventListener('click', () => navigate(el.dataset.view));
+});
+
+/* === Modal === */
+function openModal(html) {
+  document.getElementById('modal').innerHTML = html;
+  document.getElementById('modal-backdrop').classList.add('show');
+}
+function closeModal() { document.getElementById('modal-backdrop').classList.remove('show'); }
+document.getElementById('modal-backdrop').addEventListener('click', (e) => {
+  if (e.target.id === 'modal-backdrop') closeModal();
+});
+
+/* === Views === */
+const content = () => document.getElementById('content');
+const views = {};
+
+views.dashboard = async () => {
+  content().innerHTML = '<div class="empty">Cargando...</div>';
+  const d = await api('/dashboard');
+  content().innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card primary"><div class="label">Ingresos hoy</div><div class="value">${fmt(d.ingresosHoy)}</div></div>
+      <div class="stat-card success"><div class="label">Ingresos del mes</div><div class="value">${fmt(d.ingresosMes)}</div></div>
+      <div class="stat-card"><div class="label">Clientes</div><div class="value">${d.totalClientes}</div></div>
+      <div class="stat-card"><div class="label">Sucursales</div><div class="value">${d.totalSucursales}</div></div>
+      <div class="stat-card"><div class="label">Saldo total clientes</div><div class="value">${fmt(d.saldoTotal)}</div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><h2>Ingresos últimos 14 días</h2></div>
+      ${d.ingresosPorDia.length === 0 ? '<div class="empty">Sin datos</div>' : `
+        <div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Total</th></tr></thead><tbody>
+          ${d.ingresosPorDia.map(r => `<tr><td>${r.fecha}</td><td>${fmt(r.total)}</td></tr>`).join('')}
+        </tbody></table></div>`}
+    </div>`;
+};
+
+views.clientes = async () => {
+  const sucOpts = cache.sucursales.map(s => `<option value="${s.id}">${escapeHtml(s.nombre)}</option>`).join('');
+  content().innerHTML = `
+    <div class="panel">
+      <div class="panel-header">
+        <h2>Clientes</h2>
+        <div class="actions">
+          <input type="text" id="search-cli" placeholder="Buscar..." style="padding:0.5rem;border:1px solid #cbd5e1;border-radius:8px" />
+          <button class="btn" id="new-cli">Nuevo cliente</button>
+        </div>
+      </div>
+      <div class="table-wrap"><table><thead><tr>
+        <th>Nombre</th><th>Patente</th><th>Vehículo</th><th>Sucursal</th><th>Tarifa</th><th>Saldo</th><th>Acciones</th>
+      </tr></thead><tbody id="cli-tbody"></tbody></table></div>
+    </div>`;
+  document.getElementById('new-cli').onclick = () => clienteForm();
+  document.getElementById('search-cli').oninput = (e) => renderClientes(e.target.value);
+  renderClientes('');
+};
+async function renderClientes(q) {
+  const list = await api('/clientes' + (q ? `?q=${encodeURIComponent(q)}` : ''));
+  cache.clientes = list;
+  const tb = document.getElementById('cli-tbody');
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Sin clientes</td></tr>'; return; }
+  tb.innerHTML = list.map(c => `
+    <tr>
+      <td>${escapeHtml(c.nombre)}</td>
+      <td>${escapeHtml(c.patente || '-')}</td>
+      <td>${escapeHtml(c.vehiculo || '-')}</td>
+      <td>${escapeHtml(c.sucursal_nombre || '-')}</td>
+      <td>${escapeHtml(c.tipo_vehiculo || '-')}</td>
+      <td><span class="badge ${c.saldo >= 0 ? 'badge-positive' : 'badge-negative'}">${fmt(c.saldo)}</span></td>
+      <td class="table-actions">
+        <button class="btn btn-sm btn-secondary" onclick="clienteForm(${c.id})">Editar</button>
+        <button class="btn btn-sm" onclick="pagoRapido(${c.id})">Pago</button>
+        <button class="btn btn-sm btn-secondary" onclick="verCuenta(${c.id})">Cuenta</button>
+        ${currentUser.rol === 'admin' ? `<button class="btn btn-sm btn-danger" onclick="delCliente(${c.id})">×</button>` : ''}
+      </td>
+    </tr>`).join('');
+}
+window.clienteForm = async (id) => {
+  let c = { nombre: '', telefono: '', email: '', patente: '', vehiculo: '', tarifa_id: '', sucursal_id: currentUser.sucursal_id || '' };
+  if (id) c = await api('/clientes/' + id);
+  const sucOpts = cache.sucursales.map(s => `<option value="${s.id}" ${c.sucursal_id == s.id ? 'selected' : ''}>${escapeHtml(s.nombre)}</option>`).join('');
+  const tarOpts = cache.tarifas.map(t => `<option value="${t.id}" ${c.tarifa_id == t.id ? 'selected' : ''}>${escapeHtml(t.tipo_vehiculo)} - ${escapeHtml(t.sucursal_nombre || '')}</option>`).join('');
+  openModal(`
+    <h3>${id ? 'Editar' : 'Nuevo'} cliente</h3>
+    <form id="cli-form">
+      <div class="field"><label>Nombre</label><input name="nombre" value="${escapeHtml(c.nombre)}" required /></div>
+      <div class="row">
+        <div class="field"><label>Teléfono</label><input name="telefono" value="${escapeHtml(c.telefono || '')}" /></div>
+        <div class="field"><label>Email</label><input name="email" type="email" value="${escapeHtml(c.email || '')}" /></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Patente</label><input name="patente" value="${escapeHtml(c.patente || '')}" /></div>
+        <div class="field"><label>Vehículo</label><input name="vehiculo" value="${escapeHtml(c.vehiculo || '')}" /></div>
+      </div>
+      <div class="field"><label>Sucursal</label><select name="sucursal_id"><option value="">--</option>${sucOpts}</select></div>
+      <div class="field"><label>Tarifa</label><select name="tarifa_id"><option value="">--</option>${tarOpts}</select></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+        <button type="submit" class="btn">Guardar</button>
+      </div>
+    </form>`);
+  document.getElementById('cli-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const fd = Object.fromEntries(new FormData(e.target));
+    try {
+      if (id) await api('/clientes/' + id, { method: 'PUT', body: fd });
+      else await api('/clientes', { method: 'POST', body: fd });
+      closeModal(); toast('Cliente guardado'); renderClientes('');
+    } catch (e) { toast(e.message, 'error'); }
+  };
+};
+window.delCliente = async (id) => {
+  if (!confirm('¿Eliminar cliente?')) return;
+  try { await api('/clientes/' + id, { method: 'DELETE' }); toast('Eliminado'); renderClientes(''); }
+  catch (e) { toast(e.message, 'error'); }
+};
+window.pagoRapido = (cliente_id) => pagoForm(cliente_id);
+window.verCuenta = (id) => { window._cuentaId = id; navigate('cuenta'); };
+
+views.pagos = async () => {
+  content().innerHTML = `
+    <div class="panel">
+      <div class="panel-header">
+        <h2>Pagos</h2>
+        <div class="actions"><button class="btn" onclick="pagoForm()">Registrar pago</button></div>
+      </div>
+      <div class="filters">
+        <div class="field"><label>Desde</label><input type="date" id="f-desde" /></div>
+        <div class="field"><label>Hasta</label><input type="date" id="f-hasta" /></div>
+        <div class="field"><label>Sucursal</label><select id="f-suc"><option value="">Todas</option>${cache.sucursales.map(s => `<option value="${s.id}">${escapeHtml(s.nombre)}</option>`).join('')}</select></div>
+        <button class="btn btn-secondary btn-sm" id="f-apply">Aplicar</button>
+      </div>
+      <div class="table-wrap"><table><thead><tr>
+        <th>Fecha</th><th>Cliente</th><th>Sucursal</th><th>Concepto</th><th>Método</th><th>Monto</th><th>Cobrado por</th><th></th>
+      </tr></thead><tbody id="pag-tbody"></tbody></table></div>
+    </div>`;
+  document.getElementById('f-apply').onclick = renderPagos;
+  renderPagos();
+};
+async function renderPagos() {
+  const params = new URLSearchParams();
+  const d = document.getElementById('f-desde').value;
+  const h = document.getElementById('f-hasta').value;
+  const s = document.getElementById('f-suc').value;
+  if (d) params.set('desde', d); if (h) params.set('hasta', h); if (s) params.set('sucursal_id', s);
+  const list = await api('/pagos' + (params.toString() ? '?' + params : ''));
+  const tb = document.getElementById('pag-tbody');
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="8" class="empty">Sin pagos</td></tr>'; return; }
+  tb.innerHTML = list.map(p => `
+    <tr>
+      <td>${p.fecha}</td>
+      <td>${escapeHtml(p.cliente_nombre)}${p.patente ? ' (' + escapeHtml(p.patente) + ')' : ''}</td>
+      <td>${escapeHtml(p.sucursal_nombre || '-')}</td>
+      <td>${escapeHtml(p.concepto || '-')}</td>
+      <td>${escapeHtml(p.metodo)}</td>
+      <td><strong>${fmt(p.monto)}</strong></td>
+      <td>${escapeHtml(p.usuario_nombre || '-')}</td>
+      <td>${currentUser.rol === 'admin' ? `<button class="btn btn-sm btn-danger" onclick="delPago(${p.id})">×</button>` : ''}</td>
+    </tr>`).join('');
+}
+window.pagoForm = async (cliente_id) => {
+  if (!cache.clientes.length) cache.clientes = await api('/clientes');
+  const cliOpts = cache.clientes.map(c => `<option value="${c.id}" ${cliente_id == c.id ? 'selected' : ''}>${escapeHtml(c.nombre)}${c.patente ? ' - ' + escapeHtml(c.patente) : ''}</option>`).join('');
+  openModal(`
+    <h3>Registrar pago</h3>
+    <form id="pag-form">
+      <div class="field"><label>Cliente</label><select name="cliente_id" required>${cliOpts}</select></div>
+      <div class="row">
+        <div class="field"><label>Monto</label><input name="monto" type="number" step="0.01" required /></div>
+        <div class="field"><label>Fecha</label><input name="fecha" type="date" value="${new Date().toISOString().slice(0,10)}" /></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Método</label>
+          <select name="metodo"><option>efectivo</option><option>transferencia</option><option>tarjeta</option><option>mercadopago</option></select>
+        </div>
+        <div class="field"><label>Concepto</label><input name="concepto" placeholder="Ej: Abono mensual" /></div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+        <button type="submit" class="btn btn-success">Registrar</button>
+      </div>
+    </form>`);
+  document.getElementById('pag-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const fd = Object.fromEntries(new FormData(e.target));
+    try { await api('/pagos', { method: 'POST', body: fd }); closeModal(); toast('Pago registrado'); if (document.getElementById('pag-tbody')) renderPagos(); }
+    catch (e) { toast(e.message, 'error'); }
+  };
+};
+window.delPago = async (id) => {
+  if (!confirm('¿Anular pago?')) return;
+  try { await api('/pagos/' + id, { method: 'DELETE' }); toast('Anulado'); renderPagos(); }
+  catch (e) { toast(e.message, 'error'); }
+};
+
+views.cuenta = async () => {
+  if (!cache.clientes.length) cache.clientes = await api('/clientes');
+  const cliOpts = cache.clientes.map(c => `<option value="${c.id}" ${window._cuentaId == c.id ? 'selected' : ''}>${escapeHtml(c.nombre)}${c.patente ? ' - ' + escapeHtml(c.patente) : ''}</option>`).join('');
+  content().innerHTML = `
+    <div class="panel">
+      <div class="panel-header">
+        <h2>Cuenta corriente</h2>
+        <div class="actions">
+          <select id="cc-cli" style="padding:0.5rem;border:1px solid #cbd5e1;border-radius:8px"><option value="">-- Elegir cliente --</option>${cliOpts}</select>
+        </div>
+      </div>
+      <div id="cc-content"><div class="empty">Seleccioná un cliente</div></div>
+    </div>`;
+  document.getElementById('cc-cli').onchange = (e) => { window._cuentaId = e.target.value; renderCuenta(); };
+  if (window._cuentaId) renderCuenta();
+};
+async function renderCuenta() {
+  const id = window._cuentaId;
+  if (!id) return;
+  const d = await api('/cuenta-corriente/' + id);
+  document.getElementById('cc-content').innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card"><div class="label">Cliente</div><div class="value" style="font-size:1.125rem">${escapeHtml(d.cliente.nombre)}</div></div>
+      <div class="stat-card"><div class="label">Sucursal</div><div class="value" style="font-size:1.125rem">${escapeHtml(d.cliente.sucursal_nombre || '-')}</div></div>
+      <div class="stat-card primary"><div class="label">Total pagado</div><div class="value">${fmt(d.total)}</div></div>
+      <div class="stat-card success"><div class="label">Saldo actual</div><div class="value">${fmt(d.cliente.saldo)}</div></div>
+    </div>
+    <div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Concepto</th><th>Método</th><th>Monto</th><th>Cobrado por</th></tr></thead><tbody>
+      ${d.movimientos.length === 0 ? '<tr><td colspan="5" class="empty">Sin movimientos</td></tr>' :
+        d.movimientos.map(m => `<tr><td>${m.fecha}</td><td>${escapeHtml(m.concepto || '-')}</td><td>${escapeHtml(m.metodo)}</td><td><strong>${fmt(m.monto)}</strong></td><td>${escapeHtml(m.usuario_nombre || '-')}</td></tr>`).join('')}
+    </tbody></table></div>`;
+}
+
+views.resumen = async () => {
+  content().innerHTML = `
+    <div class="panel">
+      <div class="panel-header"><h2>Resumen</h2></div>
+      <div class="filters">
+        <div class="field"><label>Desde</label><input type="date" id="r-desde" /></div>
+        <div class="field"><label>Hasta</label><input type="date" id="r-hasta" /></div>
+        <div class="field"><label>Sucursal</label><select id="r-suc"><option value="">Todas</option>${cache.sucursales.map(s => `<option value="${s.id}">${escapeHtml(s.nombre)}</option>`).join('')}</select></div>
+        <button class="btn btn-sm" id="r-apply">Aplicar</button>
+      </div>
+      <div id="r-content"></div>
+    </div>`;
+  document.getElementById('r-apply').onclick = renderResumen;
+  renderResumen();
+};
+async function renderResumen() {
+  const params = new URLSearchParams();
+  const d = document.getElementById('r-desde').value;
+  const h = document.getElementById('r-hasta').value;
+  const s = document.getElementById('r-suc').value;
+  if (d) params.set('desde', d); if (h) params.set('hasta', h); if (s) params.set('sucursal_id', s);
+  const r = await api('/resumen' + (params.toString() ? '?' + params : ''));
+  document.getElementById('r-content').innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card primary"><div class="label">Total recaudado</div><div class="value">${fmt(r.totalGeneral.total)}</div></div>
+      <div class="stat-card"><div class="label">Cantidad de pagos</div><div class="value">${r.totalGeneral.cantidad}</div></div>
+    </div>
+    <div class="row" style="grid-template-columns:1fr 1fr;gap:1rem">
+      <div>
+        <h3 style="margin-bottom:0.5rem;font-size:1rem">Por sucursal</h3>
+        <div class="table-wrap"><table><thead><tr><th>Sucursal</th><th>Cantidad</th><th>Total</th></tr></thead><tbody>
+          ${r.porSucursal.length === 0 ? '<tr><td colspan="3" class="empty">Sin datos</td></tr>' :
+            r.porSucursal.map(x => `<tr><td>${escapeHtml(x.sucursal || '-')}</td><td>${x.cantidad}</td><td><strong>${fmt(x.total)}</strong></td></tr>`).join('')}
+        </tbody></table></div>
+      </div>
+      <div>
+        <h3 style="margin-bottom:0.5rem;font-size:1rem">Por método</h3>
+        <div class="table-wrap"><table><thead><tr><th>Método</th><th>Cantidad</th><th>Total</th></tr></thead><tbody>
+          ${r.porMetodo.length === 0 ? '<tr><td colspan="3" class="empty">Sin datos</td></tr>' :
+            r.porMetodo.map(x => `<tr><td>${escapeHtml(x.metodo)}</td><td>${x.cantidad}</td><td><strong>${fmt(x.total)}</strong></td></tr>`).join('')}
+        </tbody></table></div>
+      </div>
+    </div>`;
+}
+
+views.encargados = async () => {
+  cache.usuarios = await api('/usuarios');
+  content().innerHTML = `
+    <div class="panel">
+      <div class="panel-header"><h2>Encargados y administradores</h2><div class="actions"><button class="btn" onclick="userForm()">Nuevo usuario</button></div></div>
+      <div class="table-wrap"><table><thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Sucursal</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>
+        ${cache.usuarios.map(u => `
+          <tr>
+            <td>${escapeHtml(u.username)}</td>
+            <td>${escapeHtml(u.nombre)}</td>
+            <td><span class="badge badge-${u.rol}">${u.rol}</span></td>
+            <td>${escapeHtml(u.sucursal_nombre || '-')}</td>
+            <td>${u.activo ? '<span class="badge badge-positive">Activo</span>' : '<span class="badge badge-negative">Inactivo</span>'}</td>
+            <td class="table-actions">
+              <button class="btn btn-sm btn-secondary" onclick="userForm(${u.id})">Editar</button>
+              ${u.id !== currentUser.id ? `<button class="btn btn-sm btn-danger" onclick="delUser(${u.id})">×</button>` : ''}
+            </td>
+          </tr>`).join('')}
+      </tbody></table></div>
+    </div>`;
+};
+window.userForm = async (id) => {
+  let u = { username: '', nombre: '', rol: 'encargado', sucursal_id: '', activo: 1 };
+  if (id) u = cache.usuarios.find(x => x.id === id);
+  const sucOpts = cache.sucursales.map(s => `<option value="${s.id}" ${u.sucursal_id == s.id ? 'selected' : ''}>${escapeHtml(s.nombre)}</option>`).join('');
+  openModal(`
+    <h3>${id ? 'Editar' : 'Nuevo'} usuario</h3>
+    <form id="u-form">
+      <div class="field"><label>Usuario</label><input name="username" value="${escapeHtml(u.username)}" ${id ? 'readonly' : ''} required /></div>
+      <div class="field"><label>Nombre completo</label><input name="nombre" value="${escapeHtml(u.nombre)}" required /></div>
+      <div class="field"><label>Contraseña ${id ? '(dejar vacío para no cambiar)' : ''}</label><input name="password" type="password" ${id ? '' : 'required'} /></div>
+      <div class="row">
+        <div class="field"><label>Rol</label><select name="rol"><option value="encargado" ${u.rol==='encargado'?'selected':''}>Encargado</option><option value="admin" ${u.rol==='admin'?'selected':''}>Admin</option></select></div>
+        <div class="field"><label>Sucursal</label><select name="sucursal_id"><option value="">--</option>${sucOpts}</select></div>
+      </div>
+      ${id ? `<div class="field"><label><input type="checkbox" name="activo" ${u.activo?'checked':''} /> Activo</label></div>` : ''}
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+        <button type="submit" class="btn">Guardar</button>
+      </div>
+    </form>`);
+  document.getElementById('u-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const body = Object.fromEntries(fd);
+    if (id) body.activo = fd.get('activo') ? 1 : 0;
+    if (id && !body.password) delete body.password;
+    try {
+      if (id) await api('/usuarios/' + id, { method: 'PUT', body });
+      else await api('/usuarios', { method: 'POST', body });
+      closeModal(); toast('Guardado'); views.encargados();
+    } catch (e) { toast(e.message, 'error'); }
+  };
+};
+window.delUser = async (id) => {
+  if (!confirm('¿Eliminar usuario?')) return;
+  try { await api('/usuarios/' + id, { method: 'DELETE' }); toast('Eliminado'); views.encargados(); }
+  catch (e) { toast(e.message, 'error'); }
+};
+
+views.tarifas = async () => {
+  cache.tarifas = await api('/tarifas');
+  content().innerHTML = `
+    <div class="panel">
+      <div class="panel-header"><h2>Tarifas</h2><div class="actions"><button class="btn" onclick="tarifaForm()">Nueva tarifa</button></div></div>
+      <div class="table-wrap"><table><thead><tr><th>Sucursal</th><th>Tipo de vehículo</th><th>Hora</th><th>Día</th><th>Mes</th><th>Acciones</th></tr></thead><tbody>
+        ${cache.tarifas.map(t => `
+          <tr>
+            <td>${escapeHtml(t.sucursal_nombre || '-')}</td>
+            <td>${escapeHtml(t.tipo_vehiculo)}</td>
+            <td>${fmt(t.hora)}</td>
+            <td>${fmt(t.dia)}</td>
+            <td>${fmt(t.mes)}</td>
+            <td class="table-actions">
+              <button class="btn btn-sm btn-secondary" onclick="tarifaForm(${t.id})">Editar</button>
+              <button class="btn btn-sm btn-danger" onclick="delTarifa(${t.id})">×</button>
+            </td>
+          </tr>`).join('')}
+      </tbody></table></div>
+    </div>`;
+};
+window.tarifaForm = async (id) => {
+  let t = { sucursal_id: '', tipo_vehiculo: '', hora: 0, dia: 0, mes: 0 };
+  if (id) t = cache.tarifas.find(x => x.id === id);
+  const sucOpts = cache.sucursales.map(s => `<option value="${s.id}" ${t.sucursal_id == s.id ? 'selected' : ''}>${escapeHtml(s.nombre)}</option>`).join('');
+  openModal(`
+    <h3>${id ? 'Editar' : 'Nueva'} tarifa</h3>
+    <form id="t-form">
+      <div class="field"><label>Sucursal</label><select name="sucursal_id" required>${sucOpts}</select></div>
+      <div class="field"><label>Tipo de vehículo</label><input name="tipo_vehiculo" value="${escapeHtml(t.tipo_vehiculo)}" required /></div>
+      <div class="row">
+        <div class="field"><label>Hora</label><input name="hora" type="number" step="0.01" value="${t.hora}" /></div>
+        <div class="field"><label>Día</label><input name="dia" type="number" step="0.01" value="${t.dia}" /></div>
+      </div>
+      <div class="field"><label>Mes</label><input name="mes" type="number" step="0.01" value="${t.mes}" /></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+        <button type="submit" class="btn">Guardar</button>
+      </div>
+    </form>`);
+  document.getElementById('t-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const body = Object.fromEntries(new FormData(e.target));
+    try {
+      if (id) await api('/tarifas/' + id, { method: 'PUT', body });
+      else await api('/tarifas', { method: 'POST', body });
+      closeModal(); toast('Guardada'); views.tarifas();
+    } catch (e) { toast(e.message, 'error'); }
+  };
+};
+window.delTarifa = async (id) => {
+  if (!confirm('¿Eliminar tarifa?')) return;
+  try { await api('/tarifas/' + id, { method: 'DELETE' }); toast('Eliminada'); views.tarifas(); }
+  catch (e) { toast(e.message, 'error'); }
+};
+
+views.sucursales = async () => {
+  cache.sucursales = await api('/sucursales');
+  content().innerHTML = `
+    <div class="panel">
+      <div class="panel-header"><h2>Sucursales</h2><div class="actions"><button class="btn" onclick="sucForm()">Nueva sucursal</button></div></div>
+      <div class="table-wrap"><table><thead><tr><th>Nombre</th><th>Dirección</th><th>Teléfono</th><th>Acciones</th></tr></thead><tbody>
+        ${cache.sucursales.map(s => `
+          <tr>
+            <td>${escapeHtml(s.nombre)}</td>
+            <td>${escapeHtml(s.direccion || '-')}</td>
+            <td>${escapeHtml(s.telefono || '-')}</td>
+            <td class="table-actions">
+              <button class="btn btn-sm btn-secondary" onclick="sucForm(${s.id})">Editar</button>
+              <button class="btn btn-sm btn-danger" onclick="delSuc(${s.id})">×</button>
+            </td>
+          </tr>`).join('')}
+      </tbody></table></div>
+    </div>`;
+};
+window.sucForm = async (id) => {
+  let s = { nombre: '', direccion: '', telefono: '' };
+  if (id) s = cache.sucursales.find(x => x.id === id);
+  openModal(`
+    <h3>${id ? 'Editar' : 'Nueva'} sucursal</h3>
+    <form id="s-form">
+      <div class="field"><label>Nombre</label><input name="nombre" value="${escapeHtml(s.nombre)}" required /></div>
+      <div class="field"><label>Dirección</label><input name="direccion" value="${escapeHtml(s.direccion || '')}" /></div>
+      <div class="field"><label>Teléfono</label><input name="telefono" value="${escapeHtml(s.telefono || '')}" /></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+        <button type="submit" class="btn">Guardar</button>
+      </div>
+    </form>`);
+  document.getElementById('s-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const body = Object.fromEntries(new FormData(e.target));
+    try {
+      if (id) await api('/sucursales/' + id, { method: 'PUT', body });
+      else await api('/sucursales', { method: 'POST', body });
+      closeModal(); toast('Guardada'); views.sucursales(); cache.sucursales = await api('/sucursales');
+    } catch (e) { toast(e.message, 'error'); }
+  };
+};
+window.delSuc = async (id) => {
+  if (!confirm('¿Eliminar sucursal?')) return;
+  try { await api('/sucursales/' + id, { method: 'DELETE' }); toast('Eliminada'); views.sucursales(); }
+  catch (e) { toast(e.message, 'error'); }
+};
+
+/* === Boot === */
+(async () => {
+  try {
+    currentUser = await api('/auth/me');
+    showApp();
+  } catch {
+    showLogin();
+  }
+})();
+</script>
+</body>
+</html>
