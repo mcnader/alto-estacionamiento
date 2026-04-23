@@ -22,6 +22,7 @@ async function initDb() {
       password TEXT NOT NULL,
       rol TEXT DEFAULT 'encargado',
       turno TEXT,
+      cupo INTEGER DEFAULT NULL,
       activo INTEGER DEFAULT 1
     );
     CREATE TABLE IF NOT EXISTS tarifas (
@@ -43,6 +44,7 @@ async function initDb() {
       dni TEXT, cel TEXT, tel TEXT,
       tel_ref_parentesco TEXT, dom TEXT, trabajo TEXT,
       modalidad TEXT NOT NULL,
+      turno_encargado_id INTEGER DEFAULT NULL,
       vehiculo1_tipo TEXT, vehiculo1_marca TEXT, vehiculo1_modelo TEXT,
       vehiculo1_color TEXT, vehiculo1_patente TEXT,
       vehiculo2_tipo TEXT, vehiculo2_marca TEXT, vehiculo2_modelo TEXT,
@@ -70,10 +72,38 @@ async function initDb() {
     );
   `);
 
+  // Migraciones seguras para bases existentes
   await pool.query(`
     ALTER TABLE pagos ADD COLUMN IF NOT EXISTS monto_efectivo NUMERIC DEFAULT 0;
     ALTER TABLE pagos ADD COLUMN IF NOT EXISTS monto_transferencia NUMERIC DEFAULT 0;
+    ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS cupo INTEGER DEFAULT NULL;
+    ALTER TABLE clientes ADD COLUMN IF NOT EXISTS turno_encargado_id INTEGER DEFAULT NULL;
   `);
+
+  // Agregar tramos 3-9 si solo existen 0-2
+  const tr = await pool.query('SELECT COUNT(DISTINCT tramo) as n FROM tarifas');
+  if (parseInt(tr.rows[0].n) <= 3) {
+    const mods = await pool.query('SELECT DISTINCT sucursal_id,modalidad_id,modalidad_nombre,horario,vehiculo_id,vehiculo_label FROM tarifas');
+    const tramosExtra = [
+      {n:3,l:'1 al 10 (2° mes)'},{n:4,l:'11 al 20 (2° mes)'},{n:5,l:'21 al 31 (2° mes)'},
+      {n:6,l:'1 al 10 (3° mes)'},{n:7,l:'11 al 20 (3° mes)'},{n:8,l:'21 al 31 (3° mes)'},
+      {n:9,l:'1 al 10 (4° mes)'}
+    ];
+    for (const row of mods.rows) {
+      for (const t of tramosExtra) {
+        const ex = await pool.query(
+          'SELECT id FROM tarifas WHERE sucursal_id=$1 AND modalidad_id=$2 AND vehiculo_id=$3 AND tramo=$4',
+          [row.sucursal_id, row.modalidad_id, row.vehiculo_id, t.n]
+        );
+        if (!ex.rows[0]) {
+          await pool.query(
+            'INSERT INTO tarifas (sucursal_id,modalidad_id,modalidad_nombre,horario,vehiculo_id,vehiculo_label,tramo,tramo_label,precio) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,0)',
+            [row.sucursal_id, row.modalidad_id, row.modalidad_nombre, row.horario, row.vehiculo_id, row.vehiculo_label, t.n, t.l]
+          );
+        }
+      }
+    }
+  }
 
   const { rows } = await pool.query('SELECT COUNT(*) as n FROM sucursales');
   if (parseInt(rows[0].n) === 0) await seed();
@@ -87,12 +117,12 @@ async function seed() {
   const sid = s.id;
 
   await pool.query(
-    'INSERT INTO usuarios (sucursal_id,nombre,usuario,password,rol,turno) VALUES ($1,$2,$3,$4,$5,$6)',
-    [sid,'Administrador','admin',bcrypt.hashSync('admin123',10),'admin','']
+    'INSERT INTO usuarios (sucursal_id,nombre,usuario,password,rol,turno,cupo) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+    [sid,'Administrador','admin',bcrypt.hashSync('admin123',10),'admin','',null]
   );
   await pool.query(
-    'INSERT INTO usuarios (sucursal_id,nombre,usuario,password,rol,turno) VALUES ($1,$2,$3,$4,$5,$6)',
-    [sid,'Encargado 1','enc1',bcrypt.hashSync('enc123',10),'encargado','Mañana']
+    'INSERT INTO usuarios (sucursal_id,nombre,usuario,password,rol,turno,cupo) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+    [sid,'Encargado 1','enc1',bcrypt.hashSync('enc123',10),'encargado','Mañana',30]
   );
 
   const mods=[
@@ -107,6 +137,12 @@ async function seed() {
     {id:'camioneta',l:'Camioneta'},{id:'trafic',l:'Trafic'},
     {id:'trafic_larga',l:'Trafic larga'}
   ];
+  const tramos=[
+    {n:0,l:'1 al 10'},{n:1,l:'11 al 20'},{n:2,l:'21 al 31'},
+    {n:3,l:'1 al 10 (2° mes)'},{n:4,l:'11 al 20 (2° mes)'},{n:5,l:'21 al 31 (2° mes)'},
+    {n:6,l:'1 al 10 (3° mes)'},{n:7,l:'11 al 20 (3° mes)'},{n:8,l:'21 al 31 (3° mes)'},
+    {n:9,l:'1 al 10 (4° mes)'}
+  ];
   const precios={
     mensual:{moto:[25000,30000,35000],auto:[90000,95000,100000],camioneta:[100000,105000,110000],trafic:[0,0,0],trafic_larga:[0,0,0]},
     turno1:{moto:[20000,25000,30000],auto:[75000,80000,85000],camioneta:[90000,95000,100000],trafic:[120000,125000,130000],trafic_larga:[0,0,0]},
@@ -114,14 +150,13 @@ async function seed() {
     nocturno:{moto:[60000,65000,70000],auto:[75000,80000,85000],camioneta:[90000,95000,100000],trafic:[120000,125000,130000],trafic_larga:[0,0,0]},
     mensual24:{moto:[0,0,0],auto:[0,0,0],camioneta:[0,0,0],trafic:[0,0,0],trafic_larga:[0,0,0]}
   };
-  const tramos=['1 al 10','11 al 20','21 al 31'];
 
   for(const m of mods)
     for(const v of vehs)
-      for(let t=0;t<3;t++)
+      for(const t of tramos)
         await pool.query(
           'INSERT INTO tarifas (sucursal_id,modalidad_id,modalidad_nombre,horario,vehiculo_id,vehiculo_label,tramo,tramo_label,precio) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',
-          [sid,m.id,m.n,m.h,v.id,v.l,t,tramos[t],(precios[m.id]?.[v.id]?.[t])||0]
+          [sid,m.id,m.n,m.h,v.id,v.l,t.n,t.l,(precios[m.id]?.[v.id]?.[Math.min(t.n,2)])||0]
         );
 
   const cls=[
