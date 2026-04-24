@@ -61,17 +61,4 @@ router.get('/deudores',auth,async(req,res)=>{try{const s=sid(req);const mes=req.
 
 router.get('/reportes/pagos',auth,async(req,res)=>{try{const s=sid(req);const {desde,hasta}=req.query;const rows=(await db().query(`SELECT substring(p.mes,1,7) as mes, c.modalidad, SUM(p.importe_abonado) as total, COALESCE(SUM(p.monto_efectivo),0) as efectivo, COALESCE(SUM(p.monto_transferencia),0) as transferencia, COUNT(*) as cantidad FROM pagos p JOIN clientes c ON c.id=p.cliente_id WHERE p.sucursal_id=$1 AND p.anulado=0 AND p.mes>=$2 AND p.mes<=$3 GROUP BY substring(p.mes,1,7),c.modalidad ORDER BY mes DESC,modalidad`,[s,desde||'2020-01',hasta||'2099-12'])).rows;res.json(rows);}catch(e){res.status(500).json({error:e.message});}});
 
-router.get('/migrate', async (req, res) => {
-  try {
-    await db().query(`
-      ALTER TABLE sucursales ADD COLUMN IF NOT EXISTS cupo_total INTEGER DEFAULT NULL;
-      ALTER TABLE sucursales ADD COLUMN IF NOT EXISTS cupo_turno1 INTEGER DEFAULT NULL;
-      ALTER TABLE sucursales ADD COLUMN IF NOT EXISTS cupo_turno2 INTEGER DEFAULT NULL;
-      ALTER TABLE sucursales ADD COLUMN IF NOT EXISTS cupo_mensual24 INTEGER DEFAULT NULL;
-    `);
-    res.json({ ok: true, mensaje: 'Migración ejecutada' });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
 module.exports=router;
