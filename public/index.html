@@ -323,23 +323,69 @@ async function renderDashboard(){
   const now=new Date();
   $('dash-fecha').textContent=now.toLocaleDateString('es-AR',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   $('dash-mes').textContent=MESES_F[now.getMonth()]+' '+now.getFullYear();
-  try{
-    const d=await api('GET','/api/dashboard');
-    $('dash-metrics').innerHTML=`
-      <div class="mc"><div class="mc-icon bl"><i data-lucide="users" style="width:16px;height:16px;color:#1a4a7a"></i></div><div class="mc-l">Clientes activos</div><div class="mc-v">${d.activos}</div></div>
-      <div class="mc"><div class="mc-icon gr"><i data-lucide="check-circle" style="width:16px;height:16px;color:#1a6b3c"></i></div><div class="mc-l">Pagaron este mes</div><div class="mc-v gr">${d.pagaron}</div></div>
-      <div class="mc"><div class="mc-icon rd"><i data-lucide="clock" style="width:16px;height:16px;color:#8b2020"></i></div><div class="mc-l">Sin pagar</div><div class="mc-v ${d.sinPagar>0?'rd':''}">${d.sinPagar}</div></div>
-      <div class="mc"><div class="mc-icon am"><i data-lucide="trending-up" style="width:16px;height:16px;color:#7a4f00"></i></div><div class="mc-l">Recaudado ${MESES[now.getMonth()]}</div><div class="mc-v" style="font-size:18px">${pesos(d.recMes)}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">Hoy: ${pesos(d.recHoy)}</div></div>`;
-    $('dash-metrics2').innerHTML=`
-      <div class="mc"><div class="mc-l">Efectivo del mes</div><div class="mc-v" style="font-size:17px">${pesos(d.recEfectivo)}</div></div>
-      <div class="mc"><div class="mc-l">Transferencia del mes</div><div class="mc-v" style="font-size:17px;color:var(--bl)">${pesos(d.recTransferencia)}</div></div>`;
-    lucide.createIcons();
-    const mes=mesA();const pagos=await api('GET',`/api/pagos?mes=${mes}`);
-    const pp={};pagos.forEach(p=>{if(!pp[p.cliente_id])pp[p.cliente_id]={a:0,e:0};pp[p.cliente_id].a+=parseFloat(p.importe_abonado);pp[p.cliente_id].e+=parseFloat(p.importe_esperado);});
-    const tbody=$('dash-tbody');tbody.innerHTML='';const dia=now.getDate();
-    CLIS.filter(c=>c.activo).forEach(c=>{const tar=getTar(c.modalidad,c.vehiculo1_tipo||'auto',dia);const p=pp[c.id];const s=p?p.a-p.e:null;const est=p?(s>=0?`<span class="badge b-gr">✓ Pagó ${pesos(p.a)}</span>`:`<span class="badge b-am">Parcial ${pesos(p.a)}</span>`):`<span class="badge b-rd">Pendiente</span>`;const sal=p&&s<0?`<span style="color:var(--rd);font-size:11px;font-weight:600">${pesos(s)}</span>`:`<span style="color:#ccc">—</span>`;const acc=p?'':`<button class="btn btn-sm btn-p" onclick="irAPagar(${c.id})">Registrar</button>`;const tr=document.createElement('tr');tr.innerHTML=`<td><strong>${c.nombre}</strong></td><td><span class="badge b-bl">${nomMod(c.modalidad)}</span></td><td>${pesos(tar)}</td><td>${est}</td><td>${sal}</td><td>${acc}</td>`;tbody.appendChild(tr);});
-  }catch(e){}
-}
+try {
+  const [d, cupos] = await Promise.all([
+    api('GET', '/api/dashboard'),
+    api('GET', '/api/cupos')
+  ]);
+
+  $('dash-metrics').innerHTML=`
+    <div class="mc"><div class="mc-icon bl"><i data-lucide="users" style="width:16px;height:16px;color:#1a4a7a"></i></div><div class="mc-l">Clientes activos</div><div class="mc-v">${d.activos}</div></div>
+    <div class="mc"><div class="mc-icon gr"><i data-lucide="check-circle" style="width:16px;height:16px;color:#1a6b3c"></i></div><div class="mc-l">Pagaron este mes</div><div class="mc-v gr">${d.pagaron}</div></div>
+    <div class="mc"><div class="mc-icon rd"><i data-lucide="clock" style="width:16px;height:16px;color:#8b2020"></i></div><div class="mc-l">Sin pagar</div><div class="mc-v ${d.sinPagar>0?'rd':''}">${d.sinPagar}</div></div>
+    <div class="mc"><div class="mc-icon am"><i data-lucide="trending-up" style="width:16px;height:16px;color:#7a4f00"></i></div><div class="mc-l">Recaudado ${MESES[now.getMonth()]}</div><div class="mc-v" style="font-size:18px">${pesos(d.recMes)}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">Hoy: ${pesos(d.recHoy)}</div></div>`;
+
+  // Tarjeta de cupos
+  function miniBar(ocupado, cupo, label) {
+    if (!cupo) return `<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px"><span>${label}</span><span>${ocupado} activos</span></div>`;
+    const pct = Math.min(Math.round(ocupado / cupo * 100), 100);
+    const col = pct >= 100 ? '#e85454' : pct >= 80 ? '#f5a623' : '#4caf7d';
+    return `
+      <div style="margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:3px">
+          <span>${label}</span>
+          <span style="font-weight:600;color:${col}">${ocupado} / ${cupo}</span>
+        </div>
+        <div style="height:5px;background:#f0f0f0;border-radius:99px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:${col};border-radius:99px;transition:width .4s"></div>
+        </div>
+      </div>`;
+  }
+
+  const tieneAlgunCupo = cupos.cupo_total || cupos.cupo_turno1 || cupos.cupo_turno2 || cupos.cupo_mensual24;
+  const cupoTotalHTML = cupos.cupo_total
+    ? `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+         <span style="font-size:12px;font-weight:700">Total playa</span>
+         <span style="font-size:16px;font-weight:800;color:${cupos.ocupado_total>=cupos.cupo_total?'var(--rd)':cupos.ocupado_total/cupos.cupo_total>=.8?'var(--am)':'var(--gr)'}">${cupos.ocupado_total} / ${cupos.cupo_total}</span>
+       </div>`
+    : `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+         <span style="font-size:12px;font-weight:700">Total activos</span>
+         <span style="font-size:16px;font-weight:800">${cupos.ocupado_total}</span>
+       </div>`;
+
+  $('dash-metrics2').innerHTML=`
+    <div class="mc"><div class="mc-l">Efectivo del mes</div><div class="mc-v" style="font-size:17px">${pesos(d.recEfectivo)}</div></div>
+    <div class="mc"><div class="mc-l">Transferencia del mes</div><div class="mc-v" style="font-size:17px;color:var(--bl)">${pesos(d.recTransferencia)}</div></div>
+    <div class="mc" style="grid-column:1/-1">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${tieneAlgunCupo?'12px':'0'}">
+        <div class="mc-l" style="margin:0">Ocupación de la playa</div>
+        <button class="btn btn-sm" onclick="go('cupos')" style="font-size:10px;padding:3px 8px">Ver detalle</button>
+      </div>
+      ${tieneAlgunCupo ? `
+        ${cupoTotalHTML}
+        ${miniBar(cupos.ocupado_turno1, cupos.cupo_turno1, 'Turno 1')}
+        ${miniBar(cupos.ocupado_turno2, cupos.cupo_turno2, 'Turno 2')}
+        ${miniBar(cupos.ocupado_mensual24, cupos.cupo_mensual24, 'Mensual 24 hs')}
+      ` : `<div style="font-size:12px;color:var(--text3)">Total: <strong>${cupos.ocupado_total}</strong> activos · <a href="#" onclick="go('cupos')" style="color:var(--bl)">Configurar cupos</a></div>`}
+    </div>`;
+
+  lucide.createIcons();
+
+  const mes=mesA();const pagos=await api('GET',`/api/pagos?mes=${mes}`);
+  const pp={};pagos.forEach(p=>{if(!pp[p.cliente_id])pp[p.cliente_id]={a:0,e:0};pp[p.cliente_id].a+=parseFloat(p.importe_abonado);pp[p.cliente_id].e+=parseFloat(p.importe_esperado);});
+  const tbody=$('dash-tbody');tbody.innerHTML='';const dia=now.getDate();
+  CLIS.filter(c=>c.activo).forEach(c=>{const tar=getTar(c.modalidad,c.vehiculo1_tipo||'auto',dia);const p=pp[c.id];const s=p?p.a-p.e:null;const est=p?(s>=0?`<span class="badge b-gr">✓ Pagó ${pesos(p.a)}</span>`:`<span class="badge b-am">Parcial ${pesos(p.a)}</span>`):`<span class="badge b-rd">Pendiente</span>`;const sal=p&&s<0?`<span style="color:var(--rd);font-size:11px;font-weight:600">${pesos(s)}</span>`:`<span style="color:#ccc">—</span>`;const acc=p?'':`<button class="btn btn-sm btn-p" onclick="irAPagar(${c.id})">Registrar</button>`;const tr=document.createElement('tr');tr.innerHTML=`<td><strong>${c.nombre}</strong></td><td><span class="badge b-bl">${nomMod(c.modalidad)}</span></td><td>${pesos(tar)}</td><td>${est}</td><td>${sal}</td><td>${acc}</td>`;tbody.appendChild(tr);});
+} catch(e) {}
 
 function irAPagar(id){go('pagos');setTimeout(()=>{$('pago-cli').value=id;onPagoCli();},100);}
 
