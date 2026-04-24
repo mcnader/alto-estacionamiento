@@ -74,7 +74,7 @@
     </div>
 
     <div class="page" id="pg-clientes">
-      <div class="ph"><div class="pt">Clientes</div><button class="btn btn-p" onclick="abrirCli()"><i data-lucide="user-plus"></i> Nuevo cliente</button></div>
+      <div class="ph"><div class="pt">Clientes</div><button class="btn btn-p" onclick="<button class="btn btn-p" onclick="abrirCli()"><i data-lucide="user-plus"></i> Nuevo cliente</button><button class="btn" onclick="$('import-xlsx').click()"><i data-lucide="upload"></i> Importar Excel</button><input type="file" id="import-xlsx" accept=".xlsx,.xls" style="display:none" onchange="importarExcel(this)"><button class="btn" onclick="exportarMenu()"><i data-lucide="download"></i> Exportar</button>"></i> Nuevo cliente</button></div>
       <div class="tb"><input class="si" type="text" placeholder="Buscar nombre o patente..." id="q-cli" oninput="renderClientes()"><select id="f-mod" onchange="renderClientes()" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px"><option value="">Todas las modalidades</option></select><label style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--text2);cursor:pointer"><input type="checkbox" id="ver-inact" onchange="renderClientes()"> Inactivos</label></div>
       <div class="card" style="padding:0;overflow:hidden"><div class="tw"><table><thead><tr><th>Nombre</th><th>Patente(s)</th><th>Vehículo</th><th>Modalidad</th><th>Tarifa</th><th>Celular</th><th>Estado</th><th></th></tr></thead><tbody id="cli-tbody"></tbody></table></div></div>
     </div>
