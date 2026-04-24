@@ -9,11 +9,15 @@ const pool = new Pool({
 async function initDb() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS sucursales (
-      id SERIAL PRIMARY KEY,
-      nombre TEXT NOT NULL,
-      direccion TEXT,
-      created_at TEXT DEFAULT to_char(now(),'YYYY-MM-DD HH24:MI:SS')
-    );
+  id SERIAL PRIMARY KEY,
+  nombre TEXT NOT NULL,
+  direccion TEXT,
+  cupo_total INTEGER DEFAULT NULL,
+  cupo_turno1 INTEGER DEFAULT NULL,
+  cupo_turno2 INTEGER DEFAULT NULL,
+  cupo_mensual24 INTEGER DEFAULT NULL,
+  created_at TEXT DEFAULT to_char(now(),'YYYY-MM-DD HH24:MI:SS')
+);
     CREATE TABLE IF NOT EXISTS usuarios (
       id SERIAL PRIMARY KEY,
       sucursal_id INTEGER NOT NULL,
