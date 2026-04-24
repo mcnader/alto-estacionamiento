@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Mis Estacionamientos</title><link rel="manifest" href="/manifest.json"><meta name="theme-color" content="#1a1a18"><script src="https://cdn.jsdelivr.net/npm/lucide@latest"></script><script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script><script src="/excel.js"></script></head><body>
+<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Mis Estacionamientos</title><link rel="manifest" href="/manifest.json"><meta name="theme-color" content="#1a1a18"><script src="https://cdn.jsdelivr.net/npm/lucide@latest"></script><script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script><script src="/excel.js"></script><style>:root{--bg:#f5f4f0;--white:#fff;--border:#e0dfd8;--text:#1a1a18;--text2:#666;--text3:#aaa;--accent:#1a1a18;--gr:#1a6b3c;--rd:#8b2020;--am:#7a4f00;--bl:#1a4a7a;--sidebar:210px}*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;font-size:14px;background:var(--bg);color:var(--text);min-height:100vh}#login-screen{display:flex;min-height:100vh;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a1a18 0%,#2d2d2a 50%,#1a1a18 100%)}#app{display:none}.sidebar{width:var(--sidebar);background:var(--white);border-right:1px solid var(--border);position:fixed;top:0;left:0;bottom:0;z-index:100;display:flex;flex-direction:column;transition:transform .25s;box-shadow:2px 0 8px rgba(0,0,0,.06)}.s-logo{padding:18px 16px;border-bottom:1px solid var(--border);background:var(--accent)}.s-logo-row{display:flex;align-items:center;gap:10px}.s-logo-icon{width:34px;height:34px;background:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}.s-logo .name{font-size:14px;font-weight:700;color:#fff;letter-spacing:.02em}.s-logo .info{font-size:11px;color:rgba(255,255,255,.6);margin-top:4px}.s-logo .user-info{font-size:11px;color:rgba(255,255,255,.8);margin-top:2px}.s-nav{padding:8px 0;flex:1;overflow-y:auto}.s-sec{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;padding:12px 16px 4px;font-weight:600}.s-item{display:flex;align-items:center;gap:9px;padding:9px 16px;font-size:13px;color:var(--text2);cursor:pointer;border-left:2px solid transparent;transition:all .12s;border-radius:0 6px 6px 0;margin:1px 8px 1px 0}.s-item:hover{background:var(--bg);color:var(--text)}.s-item.on{background:#f0efe8;color:var(--accent);border-left-color:var(--accent);font-weight:600}.s-item i{width:15px;height:15px;flex-shrink:0}.s-foot{padding:12px 16px;border-top:1px solid var(--border);font-size:11px;color:var(--text3);display:flex;justify-content:space-between;align-items:center}.main{margin-left:var(--sidebar);padding:24px;min-height:100vh}.page{display:none}.page.on{display:block}.ph{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:8px}.pt{font-size:20px;font-weight:700;color:var(--text)}.card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}.ct{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}.mc{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,.04);transition:box-shadow .15s}.mc:hover{box-shadow:0 3px 8px rgba(0,0,0,.08)}.mc-l{font-size:10px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;font-weight:600}.mc-v{font-size:24px;font-weight:700}.mc-v.gr{color:var(--gr)}.mc-v.rd{color:var(--rd)}.mc-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:8px}.mc-icon.gr{background:#e8f5ee}.mc-icon.rd{background:#fdeaea}.mc-icon.bl{background:#e8f0fa}.mc-icon.am{background:#fef3db}.tw{overflow-x:auto}table{width:100%;border-collapse:collapse}thead th{text-align:left;font-size:10px;font-weight:700;color:var(--text3);padding:8px 10px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}tbody td{padding:10px;border-bottom:1px solid #f5f4f0;font-size:12px}tbody tr:last-child td{border-bottom:none}tbody tr:hover td{background:#fafaf8}.badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:3px 8px;border-radius:20px;font-weight:600;white-space:nowrap}.b-gr{background:#e8f5ee;color:var(--gr)}.b-am{background:#fef3db;color:var(--am)}.b-rd{background:#fdeaea;color:var(--rd)}.b-bl{background:#e8f0fa;color:var(--bl)}.b-gy{background:#f0f0f0;color:#555}.b-pu{background:#f0e8fa;color:#5a1a7a}.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--white);color:var(--text);font-size:13px;cursor:pointer;transition:all .12s;white-space:nowrap;font-weight:500}.btn:hover{background:var(--bg);border-color:#bbb}.btn-p{background:var(--accent);color:#fff;border-color:var(--accent)}.btn-p:hover{background:#333;border-color:#333}.btn-sm{padding:5px 10px;font-size:11px;border-radius:6px}.btn-dr{border-color:#d08080;color:var(--rd)}.btn-dr:hover{background:#fdeaea}.btn-gr{border-color:#7ab87a;color:var(--gr)}.btn-gr:hover{background:#e8f5ee}.fg{margin-bottom:12px}.fg label{display:block;font-size:11px;font-weight:600;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em}.fg input,.fg select,.fg textarea{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--white);color:var(--text);font-family:inherit;transition:border-color .12s}.fg input:focus,.fg select:focus,.fg textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(26,26,24,.06)}.fg2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.fg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}.tb{display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap}.si{padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--white);color:var(--text);width:220px}.si:focus{outline:none;border-color:var(--accent)}.calc-box{border-radius:10px;padding:14px 16px;margin:10px 0}.cb-t0{background:#e8f5ee;border:1px solid #b8e0cb}.cb-t1{background:#fef3db;border:1px solid #e8c97a}.cb-t2{background:#fdeaea;border:1px solid #e8a0a0}.cb-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;font-weight:600}.cb-t0 .cb-lbl,.cb-t0 .cb-val{color:var(--gr)}.cb-t1 .cb-lbl,.cb-t1 .cb-val{color:var(--am)}.cb-t2 .cb-lbl,.cb-t2 .cb-val{color:var(--rd)}.cb-val{font-size:28px;font-weight:800}.cb-det{font-size:11px;margin-top:3px;color:#555}.mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:flex-start;justify-content:center;padding:30px 14px;overflow-y:auto;backdrop-filter:blur(2px)}.mo.open{display:flex}.mbox{background:var(--white);border-radius:14px;border:1px solid var(--border);padding:20px;width:100%;max-width:540px;box-shadow:0 20px 60px rgba(0,0,0,.2)}.mt{font-size:15px;font-weight:700;margin-bottom:16px;color:var(--text)}.mf{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:14px;border-top:1px solid var(--border);flex-wrap:wrap}.mfs{display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:14px;border-top:1px solid var(--border);flex-wrap:wrap;gap:8px}.sep{border:none;border-top:1px solid var(--border);margin:14px 0}.t-mod{background:var(--white);border:1px solid var(--border);border-radius:12px;margin-bottom:14px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04)}.t-hd{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#fafaf8;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:6px}.t-grid{display:grid;grid-template-columns:110px repeat(5,1fr);border:1px solid #eee;border-radius:8px;overflow:hidden;margin-top:4px}.tgh{background:#f5f4f0;padding:7px 5px;font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;border-right:1px solid #eee;border-bottom:1px solid #eee;text-align:center;letter-spacing:.04em}.tgl{padding:8px 8px;font-size:10px;background:#fafaf8;border-right:1px solid #eee;border-bottom:1px solid #eee;color:var(--text2);font-weight:500}.tgc{padding:4px 3px;border-right:1px solid #eee;border-bottom:1px solid #eee}.tgc input{width:100%;padding:5px 6px;border:1px solid #ddd;border-radius:4px;font-size:11px;text-align:right;transition:border-color .12s}.tgc input:focus{outline:none;border-color:var(--accent)}.tg-last .tgl,.tg-last .tgc{border-bottom:none}.ficha{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:16px}.fi{background:var(--bg);border-radius:8px;padding:10px 12px;border:1px solid var(--border)}.fi-l{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;font-weight:600}.fi-v{font-size:13px;font-weight:600}.fi-v.gr{color:var(--gr)}.cc-mes{background:var(--white);border:1px solid var(--border);border-radius:10px;margin-bottom:10px;overflow:hidden}.cc-hd{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#fafaf8;flex-wrap:wrap;gap:6px}.alert-ok{background:#e8f5ee;border:1px solid #b8e0cb;color:var(--gr);border-radius:8px;padding:10px 14px;font-size:13px;margin-top:10px;font-weight:500}.row-inact td{opacity:.4;text-decoration:line-through}.toast{position:fixed;bottom:24px;right:24px;background:var(--accent);color:#fff;padding:12px 18px;border-radius:12px;font-size:13px;z-index:999;transform:translateY(80px);opacity:0;transition:all .3s;box-shadow:0 4px 16px rgba(0,0,0,.3);font-weight:500}.toast.show{transform:translateY(0);opacity:1}.hbg{display:none;position:fixed;top:14px;left:14px;z-index:150;background:var(--white);border:1px solid var(--border);border-radius:8px;padding:8px 10px;cursor:pointer;font-size:15px;box-shadow:0 2px 8px rgba(0,0,0,.1)}.bkdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99}.empty{text-align:center;padding:40px;color:var(--text3);font-size:13px}.login-box{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:36px;width:100%;max-width:380px;backdrop-filter:blur(10px)}.login-logo-wrap{text-align:center;margin-bottom:28px}.login-icon{width:64px;height:64px;background:#fff;border-radius:16px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px;box-shadow:0 4px 20px rgba(0,0,0,.3)}.login-title{font-size:22px;font-weight:800;color:#fff;letter-spacing:-.01em}.login-sub{font-size:13px;color:rgba(255,255,255,.5);margin-top:4px}.login-box .fg label{color:rgba(255,255,255,.7)}.login-box .fg input,.login-box .fg select{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.15);color:#fff}.login-box .fg input::placeholder{color:rgba(255,255,255,.3)}.login-box .fg input:focus,.login-box .fg select:focus{border-color:rgba(255,255,255,.5);box-shadow:0 0 0 3px rgba(255,255,255,.08)}.login-box .fg select option{background:#1a1a18;color:#fff}.comp{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px;max-width:380px;font-family:monospace}.comp-logo{font-size:15px;font-weight:700;border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:12px}.comp-row{display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px}.comp-total{font-size:17px;font-weight:700;border-top:1px solid var(--border);padding-top:10px;margin-top:8px;display:flex;justify-content:space-between}.comp-saldo{font-size:12px;color:var(--rd);margin-top:4px;text-align:right}.rt{border-collapse:collapse;white-space:nowrap}.rt th{background:var(--bg);padding:6px 8px;border:1px solid var(--border);font-size:9px;font-weight:700;text-align:center;color:var(--text3);text-transform:uppercase}.rt td{padding:5px 8px;border:1px solid var(--border);text-align:center;font-size:10px}.rt td.nm{text-align:left;font-size:11px;min-width:140px;position:sticky;left:0;background:var(--white);z-index:1}.rt td.pd{color:var(--gr);font-weight:700}.rt td.zr{color:#ccc}.rt tr:hover td{background:#fafaf8}.mixto-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px}.mixto-total{background:var(--bg);border-radius:8px;padding:10px 12px;font-size:13px;display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;border:1px solid var(--border)}.deudor-card{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;box-shadow:0 1px 3px rgba(0,0,0,.04);transition:box-shadow .15s}.deudor-card:hover{box-shadow:0 3px 10px rgba(0,0,0,.08)}.deudor-nombre{font-size:13px;font-weight:600}.deudor-monto{font-size:18px;font-weight:800;color:var(--rd)}.cupo-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.04)}.cupo-bar{height:8px;background:#f0f0f0;border-radius:99px;overflow:hidden;margin:10px 0 6px}.cupo-fill{height:100%;border-radius:99px;transition:width .4s}.cupo-fill.ok{background:#4caf7d}.cupo-fill.warn{background:#f5a623}.cupo-fill.full{background:#e85454}.offline-bar{display:none;position:fixed;top:0;left:0;right:0;background:#f5a623;color:#fff;text-align:center;padding:6px;font-size:12px;font-weight:600;z-index:500}.sync-btn{background:rgba(255,255,255,.3);border:none;color:#fff;padding:3px 10px;border-radius:4px;cursor:pointer;font-size:11px;margin-left:8px}@media(max-width:768px){.sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.bkdrop.open{display:block}.main{margin-left:0;padding:14px;padding-top:60px}.hbg{display:block}.metrics{grid-template-columns:repeat(2,1fr)}.fg2,.fg3{grid-template-columns:1fr}.t-grid{grid-template-columns:80px repeat(5,1fr)}}@media print{.no-print{display:none!important}.comp{border:1px solid #ccc!important}}</style></head><body>
 <div class="offline-bar" id="offline-bar">
   Sin conexión — los pagos se guardarán localmente
   <button class="sync-btn" onclick="sincronizar()">Sincronizar ahora</button>
@@ -40,9 +40,7 @@
             <circle cx="28" cy="10" r="5" fill="#4caf7d"/>
           </svg>
         </div>
-        <div>
-          <div class="name">MIS ESTACIONAMIENTOS</div>
-        </div>
+        <div><div class="name">MIS ESTACIONAMIENTOS</div></div>
       </div>
       <div class="info" id="s-suc"></div>
       <div class="user-info" id="s-user"></div>
@@ -74,7 +72,13 @@
     </div>
 
     <div class="page" id="pg-clientes">
-      <div class="ph"><div class="pt">Clientes</div><button class="btn btn-p" onclick="abrirCli()"><i data-lucide="user-plus"></i> Nuevo cliente</button><button class="btn" onclick="document.getElementById('import-xlsx').click()"><i data-lucide="upload"></i> Importar Excel</button><input type="file" id="import-xlsx" accept=".xlsx,.xls" style="display:none" onchange="importarExcel(this)"><button class="btn" onclick="exportarMenu()"><i data-lucide="download"></i> Exportar</button<i data-lucide="user-plus"></i> Nuevo cliente</button></div>
+      <div class="ph">
+        <div class="pt">Clientes</div>
+        <button class="btn btn-p" onclick="abrirCli()"><i data-lucide="user-plus"></i> Nuevo cliente</button>
+        <button class="btn" onclick="document.getElementById('import-xlsx').click()"><i data-lucide="upload"></i> Importar Excel</button>
+        <input type="file" id="import-xlsx" accept=".xlsx,.xls" style="display:none" onchange="importarExcel(this)">
+        <button class="btn" onclick="exportarMenu()"><i data-lucide="download"></i> Exportar</button>
+      </div>
       <div class="tb"><input class="si" type="text" placeholder="Buscar nombre o patente..." id="q-cli" oninput="renderClientes()"><select id="f-mod" onchange="renderClientes()" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px"><option value="">Todas las modalidades</option></select><label style="display:flex;align-items:center;gap:5px;font-size:13px;color:var(--text2);cursor:pointer"><input type="checkbox" id="ver-inact" onchange="renderClientes()"> Inactivos</label></div>
       <div class="card" style="padding:0;overflow:hidden"><div class="tw"><table><thead><tr><th>Nombre</th><th>Patente(s)</th><th>Vehículo</th><th>Modalidad</th><th>Tarifa</th><th>Celular</th><th>Estado</th><th></th></tr></thead><tbody id="cli-tbody"></tbody></table></div></div>
     </div>
@@ -128,7 +132,7 @@
     </div>
 
     <div class="page" id="pg-cupos">
-      <div class="ph"><div class="pt">Cupos por turno</div><button class="btn" onclick="loadCupos()"><i data-lucide="refresh-cw"></i> Actualizar</button></div>
+      <div class="ph"><div class="pt">Cupos por playa</div><button class="btn" onclick="loadCupos()"><i data-lucide="refresh-cw"></i> Actualizar</button></div>
       <div id="cupos-cont"></div>
     </div>
 
@@ -206,12 +210,11 @@
   <div class="comp" id="comp-body"></div>
   <div class="mf no-print"><button class="btn" onclick="closeMo('mo-comp')">Cerrar</button><button class="btn btn-p" onclick="window.print()"><i data-lucide="printer"></i> Imprimir</button></div>
 </div></div>
+
 <div class="mo" id="mo-cupos"><div class="mbox" style="max-width:420px">
   <div class="mt">Configurar cupos de la playa</div>
-  <p style="font-size:12px;color:var(--text3);margin-bottom:16px">
-    Dejá en blanco los que no querés limitar. El total es la capacidad física de la playa.
-  </p>
-  <div class="fg"><label>🅿️ Total de lugares físicos</label><input type="number" id="cupo-total" placeholder="Sin límite total"></div>
+  <p style="font-size:12px;color:var(--text3);margin-bottom:16px">Dejá en blanco los que no querés limitar. El total es la capacidad física de la playa.</p>
+  <div class="fg"><label>Total de lugares físicos</label><input type="number" id="cupo-total" placeholder="Sin límite total"></div>
   <hr class="sep">
   <div class="fg2">
     <div class="fg"><label>Turno 1 — máx</label><input type="number" id="cupo-turno1" placeholder="Sin límite"></div>
@@ -223,8 +226,10 @@
     <button class="btn btn-p" onclick="guardarCupos()"><i data-lucide="save"></i> Guardar</button>
   </div>
 </div></div>
-  
-<div class="mo" id="mo-import-preview"></div><div class="mo" id="mo-export"></div><div class="toast" id="toast"></div>
+
+<div class="mo" id="mo-import-preview"></div>
+<div class="mo" id="mo-export"></div>
+<div class="toast" id="toast"></div>
 
 <script>
 const MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
@@ -241,7 +246,6 @@ const pesos=n=>'$'+Math.round(n||0).toLocaleString('es-AR');
 const hoy=()=>new Date().toISOString().slice(0,10);
 const mesA=()=>new Date().toISOString().slice(0,7);
 
-// OFFLINE
 window.addEventListener('online',()=>{ONLINE=true;$('offline-bar').style.display='none';$('offline-indicator').style.display='none';sincronizar();});
 window.addEventListener('offline',()=>{ONLINE=false;$('offline-bar').style.display='block';$('offline-indicator').style.display='block';});
 if(!ONLINE){$('offline-bar').style.display='block';}
@@ -283,9 +287,7 @@ async function loadData(){
 }
 
 function poblarMod(sid,blank=false){const s=$(sid);if(!s)return;const v=s.value;s.innerHTML=blank?'<option value="">Todas las modalidades</option>':'';[...new Map(TARS.map(t=>[t.modalidad_id,{id:t.modalidad_id,n:t.modalidad_nombre}])).values()].forEach(m=>{const o=document.createElement('option');o.value=m.id;o.textContent=m.n;s.appendChild(o);});if(v)s.value=v;}
-
 function poblarEnc(){const s=$('pago-enc');if(!s)return;s.innerHTML='';USUS.filter(u=>u.activo).forEach(u=>{const o=document.createElement('option');o.value=u.id;o.textContent=u.nombre+(u.turno?' ('+u.turno+')':'');s.appendChild(o);});if(SES){const m=s.querySelector(`option[value="${SES.id}"]`);if(m)m.selected=true;}}
-
 function poblarTurnoEnc(){const s=$('cli-turno-enc');if(!s)return;s.innerHTML='<option value="">— Sin asignar —</option>';USUS.filter(u=>u.activo&&u.cupo).forEach(u=>{const o=document.createElement('option');o.value=u.id;o.textContent=u.nombre+(u.turno?' ('+u.turno+')':'')+' — cupo: '+u.cupo;s.appendChild(o);});}
 
 function go(id){
@@ -309,13 +311,11 @@ function go(id){
 
 function toggleSide(){$('sidebar').classList.toggle('open');$('bkdrop').classList.toggle('open');}
 function closeSide(){$('sidebar').classList.remove('open');$('bkdrop').classList.remove('open');}
-
 function getTar(mod,veh,dia){const i=dia<=10?0:dia<=20?1:2;const t=TARS.find(x=>x.modalidad_id===mod&&x.vehiculo_id===veh&&x.tramo===i);return t?t.precio:0;}
 function getTarTramo(mod,veh,tramo){const t=TARS.find(x=>x.modalidad_id===mod&&x.vehiculo_id===veh&&x.tramo===tramo);return t?t.precio:0;}
 function getTramo(dia){if(dia<=10)return{l:'Tramo 1 — días 1 al 10',c:'cb-t0'};if(dia<=20)return{l:'Tramo 2 — días 11 al 20',c:'cb-t1'};return{l:'Tramo 3 — días 21 al 31',c:'cb-t2'};}
 function nomMod(id){const t=TARS.find(x=>x.modalidad_id===id);return t?t.modalidad_nombre:id;}
 function labVeh(id){const v=VEHS.find(x=>x.id===id);return v?v.l:id;}
-
 function toggleMixto(){const f=$('pago-forma').value;$('bloque-simple').style.display=f==='mixto'?'none':'block';$('bloque-mixto').style.display=f==='mixto'?'block':'none';if(f!=='mixto'){$('pago-efectivo').value='';$('pago-transferencia').value='';}}
 function calcMixtoTotal(){const ef=parseFloat($('pago-efectivo').value)||0;const tr=parseFloat($('pago-transferencia').value)||0;$('mixto-sum').textContent=pesos(ef+tr);}
 
@@ -323,69 +323,19 @@ async function renderDashboard(){
   const now=new Date();
   $('dash-fecha').textContent=now.toLocaleDateString('es-AR',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   $('dash-mes').textContent=MESES_F[now.getMonth()]+' '+now.getFullYear();
-try {
-  const [d, cupos] = await Promise.all([
-    api('GET', '/api/dashboard'),
-    api('GET', '/api/cupos')
-  ]);
-
-  $('dash-metrics').innerHTML=`
-    <div class="mc"><div class="mc-icon bl"><i data-lucide="users" style="width:16px;height:16px;color:#1a4a7a"></i></div><div class="mc-l">Clientes activos</div><div class="mc-v">${d.activos}</div></div>
-    <div class="mc"><div class="mc-icon gr"><i data-lucide="check-circle" style="width:16px;height:16px;color:#1a6b3c"></i></div><div class="mc-l">Pagaron este mes</div><div class="mc-v gr">${d.pagaron}</div></div>
-    <div class="mc"><div class="mc-icon rd"><i data-lucide="clock" style="width:16px;height:16px;color:#8b2020"></i></div><div class="mc-l">Sin pagar</div><div class="mc-v ${d.sinPagar>0?'rd':''}">${d.sinPagar}</div></div>
-    <div class="mc"><div class="mc-icon am"><i data-lucide="trending-up" style="width:16px;height:16px;color:#7a4f00"></i></div><div class="mc-l">Recaudado ${MESES[now.getMonth()]}</div><div class="mc-v" style="font-size:18px">${pesos(d.recMes)}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">Hoy: ${pesos(d.recHoy)}</div></div>`;
-
-  // Tarjeta de cupos
-  function miniBar(ocupado, cupo, label) {
-    if (!cupo) return `<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px"><span>${label}</span><span>${ocupado} activos</span></div>`;
-    const pct = Math.min(Math.round(ocupado / cupo * 100), 100);
-    const col = pct >= 100 ? '#e85454' : pct >= 80 ? '#f5a623' : '#4caf7d';
-    return `
-      <div style="margin-bottom:8px">
-        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:3px">
-          <span>${label}</span>
-          <span style="font-weight:600;color:${col}">${ocupado} / ${cupo}</span>
-        </div>
-        <div style="height:5px;background:#f0f0f0;border-radius:99px;overflow:hidden">
-          <div style="height:100%;width:${pct}%;background:${col};border-radius:99px;transition:width .4s"></div>
-        </div>
-      </div>`;
-  }
-
-  const tieneAlgunCupo = cupos.cupo_total || cupos.cupo_turno1 || cupos.cupo_turno2 || cupos.cupo_mensual24;
-  const cupoTotalHTML = cupos.cupo_total
-    ? `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-         <span style="font-size:12px;font-weight:700">Total playa</span>
-         <span style="font-size:16px;font-weight:800;color:${cupos.ocupado_total>=cupos.cupo_total?'var(--rd)':cupos.ocupado_total/cupos.cupo_total>=.8?'var(--am)':'var(--gr)'}">${cupos.ocupado_total} / ${cupos.cupo_total}</span>
-       </div>`
-    : `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-         <span style="font-size:12px;font-weight:700">Total activos</span>
-         <span style="font-size:16px;font-weight:800">${cupos.ocupado_total}</span>
-       </div>`;
-
-  $('dash-metrics2').innerHTML=`
-    <div class="mc"><div class="mc-l">Efectivo del mes</div><div class="mc-v" style="font-size:17px">${pesos(d.recEfectivo)}</div></div>
-    <div class="mc"><div class="mc-l">Transferencia del mes</div><div class="mc-v" style="font-size:17px;color:var(--bl)">${pesos(d.recTransferencia)}</div></div>
-    <div class="mc" style="grid-column:1/-1">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${tieneAlgunCupo?'12px':'0'}">
-        <div class="mc-l" style="margin:0">Ocupación de la playa</div>
-        <button class="btn btn-sm" onclick="go('cupos')" style="font-size:10px;padding:3px 8px">Ver detalle</button>
-      </div>
-      ${tieneAlgunCupo ? `
-        ${cupoTotalHTML}
-        ${miniBar(cupos.ocupado_turno1, cupos.cupo_turno1, 'Turno 1')}
-        ${miniBar(cupos.ocupado_turno2, cupos.cupo_turno2, 'Turno 2')}
-        ${miniBar(cupos.ocupado_mensual24, cupos.cupo_mensual24, 'Mensual 24 hs')}
-      ` : `<div style="font-size:12px;color:var(--text3)">Total: <strong>${cupos.ocupado_total}</strong> activos · <a href="#" onclick="go('cupos')" style="color:var(--bl)">Configurar cupos</a></div>`}
-    </div>`;
-
-  lucide.createIcons();
-
-  const mes=mesA();const pagos=await api('GET',`/api/pagos?mes=${mes}`);
-  const pp={};pagos.forEach(p=>{if(!pp[p.cliente_id])pp[p.cliente_id]={a:0,e:0};pp[p.cliente_id].a+=parseFloat(p.importe_abonado);pp[p.cliente_id].e+=parseFloat(p.importe_esperado);});
-  const tbody=$('dash-tbody');tbody.innerHTML='';const dia=now.getDate();
-  CLIS.filter(c=>c.activo).forEach(c=>{const tar=getTar(c.modalidad,c.vehiculo1_tipo||'auto',dia);const p=pp[c.id];const s=p?p.a-p.e:null;const est=p?(s>=0?`<span class="badge b-gr">✓ Pagó ${pesos(p.a)}</span>`:`<span class="badge b-am">Parcial ${pesos(p.a)}</span>`):`<span class="badge b-rd">Pendiente</span>`;const sal=p&&s<0?`<span style="color:var(--rd);font-size:11px;font-weight:600">${pesos(s)}</span>`:`<span style="color:#ccc">—</span>`;const acc=p?'':`<button class="btn btn-sm btn-p" onclick="irAPagar(${c.id})">Registrar</button>`;const tr=document.createElement('tr');tr.innerHTML=`<td><strong>${c.nombre}</strong></td><td><span class="badge b-bl">${nomMod(c.modalidad)}</span></td><td>${pesos(tar)}</td><td>${est}</td><td>${sal}</td><td>${acc}</td>`;tbody.appendChild(tr);});
-} catch(e) {}
+  try{
+    const [d,cupos]=await Promise.all([api('GET','/api/dashboard'),api('GET','/api/cupos')]);
+    $('dash-metrics').innerHTML=`<div class="mc"><div class="mc-icon bl"><i data-lucide="users" style="width:16px;height:16px;color:#1a4a7a"></i></div><div class="mc-l">Clientes activos</div><div class="mc-v">${d.activos}</div></div><div class="mc"><div class="mc-icon gr"><i data-lucide="check-circle" style="width:16px;height:16px;color:#1a6b3c"></i></div><div class="mc-l">Pagaron este mes</div><div class="mc-v gr">${d.pagaron}</div></div><div class="mc"><div class="mc-icon rd"><i data-lucide="clock" style="width:16px;height:16px;color:#8b2020"></i></div><div class="mc-l">Sin pagar</div><div class="mc-v ${d.sinPagar>0?'rd':''}">${d.sinPagar}</div></div><div class="mc"><div class="mc-icon am"><i data-lucide="trending-up" style="width:16px;height:16px;color:#7a4f00"></i></div><div class="mc-l">Recaudado ${MESES[now.getMonth()]}</div><div class="mc-v" style="font-size:18px">${pesos(d.recMes)}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">Hoy: ${pesos(d.recHoy)}</div></div>`;
+    function miniBar(ocupado,cupo,label){if(!cupo)return`<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:4px"><span>${label}</span><span>${ocupado} activos</span></div>`;const pct=Math.min(Math.round(ocupado/cupo*100),100);const col=pct>=100?'#e85454':pct>=80?'#f5a623':'#4caf7d';return`<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:3px"><span>${label}</span><span style="font-weight:600;color:${col}">${ocupado} / ${cupo}</span></div><div style="height:5px;background:#f0f0f0;border-radius:99px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${col};border-radius:99px"></div></div></div>`;}
+    const tieneAlgunCupo=cupos.cupo_total||cupos.cupo_turno1||cupos.cupo_turno2||cupos.cupo_mensual24;
+    const cupoTotalHTML=cupos.cupo_total?`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-size:12px;font-weight:700">Total playa</span><span style="font-size:16px;font-weight:800;color:${cupos.ocupado_total>=cupos.cupo_total?'var(--rd)':cupos.ocupado_total/cupos.cupo_total>=.8?'var(--am)':'var(--gr)'}">${cupos.ocupado_total} / ${cupos.cupo_total}</span></div>`:`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-size:12px;font-weight:700">Total activos</span><span style="font-size:16px;font-weight:800">${cupos.ocupado_total}</span></div>`;
+    $('dash-metrics2').innerHTML=`<div class="mc"><div class="mc-l">Efectivo del mes</div><div class="mc-v" style="font-size:17px">${pesos(d.recEfectivo)}</div></div><div class="mc"><div class="mc-l">Transferencia del mes</div><div class="mc-v" style="font-size:17px;color:var(--bl)">${pesos(d.recTransferencia)}</div></div><div class="mc" style="grid-column:1/-1"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${tieneAlgunCupo?'12px':'0'}"><div class="mc-l" style="margin:0">Ocupación de la playa</div><button class="btn btn-sm" onclick="go('cupos')" style="font-size:10px;padding:3px 8px">Ver detalle</button></div>${tieneAlgunCupo?`${cupoTotalHTML}${miniBar(cupos.ocupado_turno1,cupos.cupo_turno1,'Turno 1')}${miniBar(cupos.ocupado_turno2,cupos.cupo_turno2,'Turno 2')}${miniBar(cupos.ocupado_mensual24,cupos.cupo_mensual24,'Mensual 24 hs')}`:`<div style="font-size:12px;color:var(--text3)">Total: <strong>${cupos.ocupado_total}</strong> activos · <a href="#" onclick="go('cupos')" style="color:var(--bl)">Configurar cupos</a></div>`}</div>`;
+    lucide.createIcons();
+    const mes=mesA();const pagos=await api('GET',`/api/pagos?mes=${mes}`);
+    const pp={};pagos.forEach(p=>{if(!pp[p.cliente_id])pp[p.cliente_id]={a:0,e:0};pp[p.cliente_id].a+=parseFloat(p.importe_abonado);pp[p.cliente_id].e+=parseFloat(p.importe_esperado);});
+    const tbody=$('dash-tbody');tbody.innerHTML='';const dia=now.getDate();
+    CLIS.filter(c=>c.activo).forEach(c=>{const tar=getTar(c.modalidad,c.vehiculo1_tipo||'auto',dia);const p=pp[c.id];const s=p?p.a-p.e:null;const est=p?(s>=0?`<span class="badge b-gr">✓ Pagó ${pesos(p.a)}</span>`:`<span class="badge b-am">Parcial ${pesos(p.a)}</span>`):`<span class="badge b-rd">Pendiente</span>`;const sal=p&&s<0?`<span style="color:var(--rd);font-size:11px;font-weight:600">${pesos(s)}</span>`:`<span style="color:#ccc">—</span>`;const acc=p?'':`<button class="btn btn-sm btn-p" onclick="irAPagar(${c.id})">Registrar</button>`;const tr=document.createElement('tr');tr.innerHTML=`<td><strong>${c.nombre}</strong></td><td><span class="badge b-bl">${nomMod(c.modalidad)}</span></td><td>${pesos(tar)}</td><td>${est}</td><td>${sal}</td><td>${acc}</td>`;tbody.appendChild(tr);});
+  }catch(e){}
 }
 
 function irAPagar(id){go('pagos');setTimeout(()=>{$('pago-cli').value=id;onPagoCli();},100);}
@@ -451,15 +401,11 @@ async function registrarPago(){
   if(forma==='mixto'){monto_efectivo=parseFloat($('pago-efectivo').value)||0;monto_transferencia=parseFloat($('pago-transferencia').value)||0;importe_abonado=monto_efectivo+monto_transferencia;if(!importe_abonado){alert('Ingresá los montos del pago mixto');return;}}
   else{importe_abonado=parseFloat($('pago-imp').value)||0;if(!importe_abonado){alert('Ingresá el importe');return;}if(forma==='efectivo')monto_efectivo=importe_abonado;else monto_transferencia=importe_abonado;}
   const payload={cliente_id:cid,fecha:f,mes,importe_esperado:esp,importe_abonado,monto_efectivo,monto_transferencia,forma_pago:forma,encargado_id:parseInt($('pago-enc').value)||SES.id,obs:$('pago-obs').value};
-  if(!ONLINE){
-    const item={id:Date.now(),url:'/api/pagos',data:payload};COLA_OFFLINE.push(item);localStorage.setItem('cola_offline',JSON.stringify(COLA_OFFLINE));
-    toast('Pago guardado offline — se sincronizará cuando haya conexión');limpiarPago();return;
-  }
+  if(!ONLINE){const item={id:Date.now(),url:'/api/pagos',data:payload};COLA_OFFLINE.push(item);localStorage.setItem('cola_offline',JSON.stringify(COLA_OFFLINE));toast('Pago guardado offline — se sincronizará cuando haya conexión');limpiarPago();return;}
   try{const p=await api('POST','/api/pagos',payload);mostrarComp(p,c,esp,importe_abonado);const ok=$('pago-ok');ok.style.display='block';ok.className='alert-ok';ok.textContent='✓ Pago registrado: '+c.nombre+' — '+pesos(importe_abonado)+(importe_abonado<esp?' (PARCIAL, saldo: '+pesos(importe_abonado-esp)+')':'');limpiarPago();await renderPrec();setTimeout(()=>ok.style.display='none',6000);}catch(e){toast(e.message,false);}
 }
 
 function mostrarComp(pago,cli,esp,abo){const s=abo-esp;const[a,m]=pago.mes.split('-');const enc=USUS.find(u=>u.id==pago.encargado_id);const suc=SUCS.find(x=>x.id==SES.sucursal_id);const detalle_forma=pago.forma_pago==='mixto'?`Efectivo: ${pesos(pago.monto_efectivo)} / Transfer: ${pesos(pago.monto_transferencia)}`:pago.forma_pago;$('comp-body').innerHTML=`<div class="comp-logo">MIS ESTACIONAMIENTOS<br><span style="font-size:11px;font-weight:400;color:var(--text3)">${suc?.nombre||''}</span></div><div class="comp-row"><span>Cliente</span><span>${cli.nombre}</span></div><div class="comp-row"><span>Patente</span><span>${cli.vehiculo1_patente||'—'}${cli.vehiculo2_patente?' / '+cli.vehiculo2_patente:''}</span></div><div class="comp-row"><span>Modalidad</span><span>${nomMod(cli.modalidad)}</span></div><div class="comp-row"><span>Mes abonado</span><span>${MESES_F[parseInt(m)-1]} ${a}</span></div><div class="comp-row"><span>Fecha de pago</span><span>${pago.fecha}</span></div><div class="comp-row"><span>Forma de pago</span><span>${detalle_forma}</span></div><div class="comp-row"><span>Encargado</span><span>${enc?.nombre||'—'}</span></div><div class="comp-total"><span>Total abonado</span><span>${pesos(abo)}</span></div>${s<0?`<div class="comp-saldo">Saldo pendiente: ${pesos(Math.abs(s))}</div>`:''}<div style="font-size:10px;color:var(--text3);margin-top:12px;text-align:center">Gracias por su pago</div>`;openMo('mo-comp');}
-
 function limpiarPago(){$('pago-cli').value='';$('pago-obs').value='';$('pago-imp').value='';$('pago-efectivo').value='';$('pago-transferencia').value='';$('pago-fecha').value=hoy();$('pago-mes').value=mesA();$('calc-block').style.display='none';$('saldo-prev').style.display='none';$('pago-forma').value='efectivo';toggleMixto();}
 
 async function renderPrec(){try{const pagos=await api('GET','/api/pagos');PREC=pagos.slice(0,15);const tbody=$('prec-tbody');tbody.innerHTML='';if(!PREC.length){tbody.innerHTML='<tr><td colspan="7"><div class="empty">Sin pagos aún</div></td></tr>';return;}PREC.forEach(p=>{const[a,m]=p.mes.split('-');const tr=document.createElement('tr');const formaBadge=p.forma_pago==='mixto'?'b-pu':p.forma_pago==='transferencia'?'b-bl':'b-gy';const ab=SES?.rol==='admin'?`<td><button class="btn btn-sm" onclick="abrirEditPago(${p.id})">Editar</button></td>`:'';tr.innerHTML=`<td>${p.cliente_nombre||'—'}</td><td>${MESES[parseInt(m)-1]} ${a}</td><td style="color:var(--text3)">${p.fecha}</td><td style="color:var(--gr);font-weight:600">${pesos(p.importe_abonado)}</td><td><span class="badge ${formaBadge}">${p.forma_pago}</span></td><td style="color:var(--text3)">${p.encargado_nombre||'—'}</td>${ab}`;tbody.appendChild(tr);});}catch(e){}}
@@ -481,101 +427,21 @@ async function renderDeudores(){const mes=$('deud-mes').value||mesA();try{const 
 function initReportes(){const now=new Date();const hace3=new Date(now.getFullYear(),now.getMonth()-2,1);$('rep-desde').value=hace3.toISOString().slice(0,7);$('rep-hasta').value=mesA();}
 async function renderReportes(){const desde=$('rep-desde').value;const hasta=$('rep-hasta').value;if(!desde||!hasta){alert('Seleccioná el período');return;}try{const rows=await api('GET',`/api/reportes/pagos?desde=${desde}&hasta=${hasta}`);if(!rows.length){$('rep-cont').innerHTML='<div class="empty">Sin datos en ese período</div>';return;}const meses=[...new Set(rows.map(r=>r.mes))].sort().reverse();let html='';meses.forEach(mes=>{const[a,m]=mes.split('-');const filas=rows.filter(r=>r.mes===mes);const totEf=filas.reduce((s,r)=>s+parseFloat(r.efectivo||0),0);const totTr=filas.reduce((s,r)=>s+parseFloat(r.transferencia||0),0);const totTotal=filas.reduce((s,r)=>s+parseFloat(r.total||0),0);html+=`<div class="card" style="margin-bottom:12px"><div class="ct">${MESES_F[parseInt(m)-1]} ${a} — Total: ${pesos(totTotal)}</div><div class="tw"><table><thead><tr><th>Modalidad</th><th>Pagos</th><th>Efectivo</th><th>Transferencia</th><th>Total</th></tr></thead><tbody>`;filas.forEach(r=>{html+=`<tr><td><span class="badge b-bl">${nomMod(r.modalidad)}</span></td><td style="text-align:center">${r.cantidad}</td><td>${pesos(r.efectivo||0)}</td><td style="color:var(--bl)">${pesos(r.transferencia||0)}</td><td style="font-weight:700;color:var(--gr)">${pesos(r.total)}</td></tr>`;});html+=`<tr style="background:var(--bg);font-weight:700"><td>TOTAL</td><td style="text-align:center">${filas.reduce((s,r)=>s+parseInt(r.cantidad),0)}</td><td>${pesos(totEf)}</td><td style="color:var(--bl)">${pesos(totTr)}</td><td style="color:var(--gr)">${pesos(totTotal)}</td></tr></tbody></table></div></div>`;});$('rep-cont').innerHTML=html;}catch(e){$('rep-cont').innerHTML='<div class="empty">Error al cargar</div>';}}
 
-async function loadCupos() {
-  try {
-    const d = await api('GET', '/api/cupos');
-    const suc = d.sucursal;
-
-    function cupoBar(ocupado, cupo, label, colorClass, badgeClass) {
-      if (!cupo) {
-        return `
-          <div style="margin-bottom:14px">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-              <span style="font-size:12px;font-weight:600;color:var(--text2)">${label}</span>
-              <span style="font-size:12px;color:var(--text3)">${ocupado} activos · <em style="color:var(--text3)">sin cupo definido</em></span>
-            </div>
-          </div>`;
-      }
-      const pct = Math.min(Math.round(ocupado / cupo * 100), 100);
-      const fillClass = pct >= 100 ? 'full' : pct >= 80 ? 'warn' : 'ok';
-      const badge = pct >= 100 ? 'b-rd' : pct >= 80 ? 'b-am' : 'b-gr';
-      return `
-        <div style="margin-bottom:14px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-            <span style="font-size:12px;font-weight:600;color:var(--text2)">${label}</span>
-            <span class="badge ${badge}">${ocupado} / ${cupo}</span>
-          </div>
-          <div class="cupo-bar"><div class="cupo-fill ${fillClass}" style="width:${pct}%"></div></div>
-          <div style="font-size:11px;color:var(--text3);margin-top:3px;text-align:right">
-            ${pct >= 100 ? '<strong style="color:var(--rd)">¡Cupo completo!</strong>' : `Quedan <strong>${cupo - ocupado}</strong> lugares`}
-          </div>
-        </div>`;
-    }
-
-    // Total general
-    const totalPct = d.cupo_total
-      ? Math.min(Math.round(d.ocupado_total / d.cupo_total * 100), 100) : null;
-    const totalColor = totalPct >= 100 ? 'var(--rd)' : totalPct >= 80 ? 'var(--am)' : 'var(--gr)';
-
-    const resumenTotal = d.cupo_total
-      ? `<div style="background:var(--bg);border-radius:10px;padding:12px 16px;margin-bottom:16px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
-           <span style="font-weight:700">Total playa</span>
-           <span style="font-size:20px;font-weight:800;color:${totalColor}">${d.ocupado_total} / ${d.cupo_total}</span>
-         </div>`
-      : `<div style="background:var(--bg);border-radius:10px;padding:12px 16px;margin-bottom:16px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
-           <span style="font-weight:700">Total activos en la playa</span>
-           <span style="font-size:20px;font-weight:800">${d.ocupado_total}</span>
-         </div>`;
-
-    $('cupos-cont').innerHTML = `
-      <div class="cupo-card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">
-          <div>
-            <div style="font-weight:700;font-size:15px">${suc.nombre}</div>
-            <div style="font-size:12px;color:var(--text3)">${suc.direccion || ''}</div>
-          </div>
-          <button class="btn btn-sm" onclick="editarCupos()"><i data-lucide="settings"></i> Configurar cupos</button>
-        </div>
-        ${resumenTotal}
-        ${cupoBar(d.ocupado_turno1, d.cupo_turno1, 'Turno 1')}
-        ${cupoBar(d.ocupado_turno2, d.cupo_turno2, 'Turno 2')}
-        ${cupoBar(d.ocupado_mensual24, d.cupo_mensual24, 'Mensual 24 hs')}
-        ${d.ocupado_otros > 0 ? `<div style="font-size:11px;color:var(--text3);margin-top:6px">Otras modalidades: ${d.ocupado_otros} activos</div>` : ''}
-      </div>`;
-
+async function loadCupos(){
+  try{
+    const d=await api('GET','/api/cupos');const suc=d.sucursal;
+    function cupoBar(ocupado,cupo,label){if(!cupo)return`<div style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:12px;font-weight:600;color:var(--text2)">${label}</span><span style="font-size:12px;color:var(--text3)">${ocupado} activos · <em>sin cupo definido</em></span></div></div>`;const pct=Math.min(Math.round(ocupado/cupo*100),100);const fillClass=pct>=100?'full':pct>=80?'warn':'ok';const badge=pct>=100?'b-rd':pct>=80?'b-am':'b-gr';return`<div style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:12px;font-weight:600;color:var(--text2)">${label}</span><span class="badge ${badge}">${ocupado} / ${cupo}</span></div><div class="cupo-bar"><div class="cupo-fill ${fillClass}" style="width:${pct}%"></div></div><div style="font-size:11px;color:var(--text3);margin-top:3px;text-align:right">${pct>=100?'<strong style="color:var(--rd)">¡Cupo completo!</strong>':`Quedan <strong>${cupo-ocupado}</strong> lugares`}</div></div>`;}
+    const totalColor=d.cupo_total?(d.ocupado_total>=d.cupo_total?'var(--rd)':d.ocupado_total/d.cupo_total>=.8?'var(--am)':'var(--gr)'):'inherit';
+    const resumenTotal=d.cupo_total?`<div style="background:var(--bg);border-radius:10px;padding:12px 16px;margin-bottom:16px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700">Total playa</span><span style="font-size:20px;font-weight:800;color:${totalColor}">${d.ocupado_total} / ${d.cupo_total}</span></div>`:`<div style="background:var(--bg);border-radius:10px;padding:12px 16px;margin-bottom:16px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700">Total activos en la playa</span><span style="font-size:20px;font-weight:800">${d.ocupado_total}</span></div>`;
+    $('cupos-cont').innerHTML=`<div class="cupo-card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px"><div><div style="font-weight:700;font-size:15px">${suc.nombre}</div><div style="font-size:12px;color:var(--text3)">${suc.direccion||''}</div></div><button class="btn btn-sm" onclick="editarCupos()"><i data-lucide="settings"></i> Configurar cupos</button></div>${resumenTotal}${cupoBar(d.ocupado_turno1,d.cupo_turno1,'Turno 1')}${cupoBar(d.ocupado_turno2,d.cupo_turno2,'Turno 2')}${cupoBar(d.ocupado_mensual24,d.cupo_mensual24,'Mensual 24 hs')}${d.ocupado_otros>0?`<div style="font-size:11px;color:var(--text3);margin-top:6px">Otras modalidades: ${d.ocupado_otros} activos</div>`:''}</div>`;
     lucide.createIcons();
-  } catch (e) {
-    $('cupos-cont').innerHTML = '<div class="empty">Error al cargar</div>';
-  }
+  }catch(e){$('cupos-cont').innerHTML='<div class="empty">Error al cargar</div>';}
 }
 
-function editarCupos() {
-  // Cargar valores actuales en el modal
-  api('GET', '/api/cupos').then(d => {
-    $('cupo-total').value   = d.cupo_total   || '';
-    $('cupo-turno1').value  = d.cupo_turno1  || '';
-    $('cupo-turno2').value  = d.cupo_turno2  || '';
-    $('cupo-m24').value     = d.cupo_mensual24 || '';
-    openMo('mo-cupos');
-  });
-}
-
-async function guardarCupos() {
-  try {
-    await api('PUT', '/api/cupos', {
-      cupo_total:     parseInt($('cupo-total').value)  || null,
-      cupo_turno1:    parseInt($('cupo-turno1').value) || null,
-      cupo_turno2:    parseInt($('cupo-turno2').value) || null,
-      cupo_mensual24: parseInt($('cupo-m24').value)    || null
-    });
-    closeMo('mo-cupos');
-    loadCupos();
-    toast('Cupos guardados');
-  } catch (e) { toast(e.message, false); }
-}
+function editarCupos(){api('GET','/api/cupos').then(d=>{$('cupo-total').value=d.cupo_total||'';$('cupo-turno1').value=d.cupo_turno1||'';$('cupo-turno2').value=d.cupo_turno2||'';$('cupo-m24').value=d.cupo_mensual24||'';openMo('mo-cupos');});}
+async function guardarCupos(){try{await api('PUT','/api/cupos',{cupo_total:parseInt($('cupo-total').value)||null,cupo_turno1:parseInt($('cupo-turno1').value)||null,cupo_turno2:parseInt($('cupo-turno2').value)||null,cupo_mensual24:parseInt($('cupo-m24').value)||null});closeMo('mo-cupos');loadCupos();toast('Cupos guardados');}catch(e){toast(e.message,false);}}
 
 function renderEncs(){const tbody=$('enc-tbody');tbody.innerHTML='';USUS.forEach(u=>{const tr=document.createElement('tr');tr.innerHTML=`<td><strong>${u.nombre}</strong></td><td style="color:var(--text2)">${u.usuario}</td><td>${u.turno||'—'}</td><td>${u.cupo?`<span class="badge b-bl">${u.cupo} máx</span>`:'<span style="color:var(--text3)">Sin límite</span>'}</td><td><span class="badge ${u.rol==='admin'?'b-bl':'b-gy'}">${u.rol}</span></td><td>${u.activo?'<span class="badge b-gr">Activo</span>':'<span class="badge b-rd">Inactivo</span>'}</td><td><button class="btn btn-sm" onclick="abrirEnc(${u.id})">Editar</button></td>`;tbody.appendChild(tr);});}
-
 function abrirEnc(id){eEnc=id||null;$('mo-enc-t').textContent=id?'Editar encargado':'Nuevo encargado';const u=id?USUS.find(x=>x.id===id):{};$('enc-id').value=id||'';$('enc-nombre').value=u.nombre||'';$('enc-user').value=u.usuario||'';$('enc-pass').value='';$('enc-turno').value=u.turno||'';$('enc-cupo').value=u.cupo||'';$('enc-rol').value=u.rol||'encargado';$('enc-activo').value=u.activo!==undefined?(u.activo?'1':'0'):'1';const uf=$('enc-user');uf.readOnly=!!id;uf.style.background=id?'var(--bg)':'';openMo('mo-enc');}
 async function guardarEnc(){const n=$('enc-nombre').value.trim();if(!n){alert('El nombre es obligatorio');return;}const d={nombre:n,turno:$('enc-turno').value,rol:$('enc-rol').value,activo:parseInt($('enc-activo').value),cupo:parseInt($('enc-cupo').value)||null};const p=$('enc-pass').value;if(p)d.password=p;if(!eEnc){d.usuario=$('enc-user').value.trim();d.password=p||'enc123';}try{if(eEnc)await api('PUT',`/api/usuarios/${eEnc}`,d);else await api('POST','/api/usuarios',d);USUS=await api('GET','/api/usuarios');poblarEnc();poblarTurnoEnc();closeMo('mo-enc');renderEncs();toast(eEnc?'Encargado actualizado':'Encargado creado');}catch(e){toast(e.message,false);}}
 
@@ -586,12 +452,7 @@ function renderTarifas(){
   mods.forEach(mod=>{
     const div=document.createElement('div');div.className='t-mod';
     let g=`<div class="t-grid"><div class="tgh" style="text-align:left">Tramo</div>${VEHS.map(v=>`<div class="tgh">${v.l}</div>`).join('')}`;
-    tramosDisp.forEach((ti,idx)=>{
-      const last=idx===tramosDisp.length-1?'tg-last':'';
-      const lbl=TRAMOS_LABELS[ti]||('Tramo '+(ti+1));
-      g+=`<div class="tgl ${last}">${lbl}</div>`;
-      VEHS.forEach(v=>{const t=TARS.find(x=>x.modalidad_id===mod.id&&x.vehiculo_id===v.id&&x.tramo===ti);g+=`<div class="tgc ${last}"><input type="number" value="${t?t.precio:0}" data-id="${t?t.id:''}" step="1000" min="0"></div>`;});
-    });
+    tramosDisp.forEach((ti,idx)=>{const last=idx===tramosDisp.length-1?'tg-last':'';const lbl=TRAMOS_LABELS[ti]||('Tramo '+(ti+1));g+=`<div class="tgl ${last}">${lbl}</div>`;VEHS.forEach(v=>{const t=TARS.find(x=>x.modalidad_id===mod.id&&x.vehiculo_id===v.id&&x.tramo===ti);g+=`<div class="tgc ${last}"><input type="number" value="${t?t.precio:0}" data-id="${t?t.id:''}" step="1000" min="0"></div>`;});});
     g+='</div>';
     div.innerHTML=`<div class="t-hd"><div style="display:flex;align-items:center;gap:8px"><span class="badge b-bl">${mod.id}</span><strong>${mod.n}</strong></div><span style="font-size:11px;color:var(--text3)">${mod.h}</span></div><div style="padding:14px 16px">${g}</div>`;
     cont.appendChild(div);
