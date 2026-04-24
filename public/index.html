@@ -386,6 +386,7 @@ try {
   const tbody=$('dash-tbody');tbody.innerHTML='';const dia=now.getDate();
   CLIS.filter(c=>c.activo).forEach(c=>{const tar=getTar(c.modalidad,c.vehiculo1_tipo||'auto',dia);const p=pp[c.id];const s=p?p.a-p.e:null;const est=p?(s>=0?`<span class="badge b-gr">✓ Pagó ${pesos(p.a)}</span>`:`<span class="badge b-am">Parcial ${pesos(p.a)}</span>`):`<span class="badge b-rd">Pendiente</span>`;const sal=p&&s<0?`<span style="color:var(--rd);font-size:11px;font-weight:600">${pesos(s)}</span>`:`<span style="color:#ccc">—</span>`;const acc=p?'':`<button class="btn btn-sm btn-p" onclick="irAPagar(${c.id})">Registrar</button>`;const tr=document.createElement('tr');tr.innerHTML=`<td><strong>${c.nombre}</strong></td><td><span class="badge b-bl">${nomMod(c.modalidad)}</span></td><td>${pesos(tar)}</td><td>${est}</td><td>${sal}</td><td>${acc}</td>`;tbody.appendChild(tr);});
 } catch(e) {}
+}
 
 function irAPagar(id){go('pagos');setTimeout(()=>{$('pago-cli').value=id;onPagoCli();},100);}
 
