@@ -417,16 +417,97 @@ async function renderDeudores(){const mes=$('deud-mes').value||mesA();try{const 
 function initReportes(){const now=new Date();const hace3=new Date(now.getFullYear(),now.getMonth()-2,1);$('rep-desde').value=hace3.toISOString().slice(0,7);$('rep-hasta').value=mesA();}
 async function renderReportes(){const desde=$('rep-desde').value;const hasta=$('rep-hasta').value;if(!desde||!hasta){alert('Seleccioná el período');return;}try{const rows=await api('GET',`/api/reportes/pagos?desde=${desde}&hasta=${hasta}`);if(!rows.length){$('rep-cont').innerHTML='<div class="empty">Sin datos en ese período</div>';return;}const meses=[...new Set(rows.map(r=>r.mes))].sort().reverse();let html='';meses.forEach(mes=>{const[a,m]=mes.split('-');const filas=rows.filter(r=>r.mes===mes);const totEf=filas.reduce((s,r)=>s+parseFloat(r.efectivo||0),0);const totTr=filas.reduce((s,r)=>s+parseFloat(r.transferencia||0),0);const totTotal=filas.reduce((s,r)=>s+parseFloat(r.total||0),0);html+=`<div class="card" style="margin-bottom:12px"><div class="ct">${MESES_F[parseInt(m)-1]} ${a} — Total: ${pesos(totTotal)}</div><div class="tw"><table><thead><tr><th>Modalidad</th><th>Pagos</th><th>Efectivo</th><th>Transferencia</th><th>Total</th></tr></thead><tbody>`;filas.forEach(r=>{html+=`<tr><td><span class="badge b-bl">${nomMod(r.modalidad)}</span></td><td style="text-align:center">${r.cantidad}</td><td>${pesos(r.efectivo||0)}</td><td style="color:var(--bl)">${pesos(r.transferencia||0)}</td><td style="font-weight:700;color:var(--gr)">${pesos(r.total)}</td></tr>`;});html+=`<tr style="background:var(--bg);font-weight:700"><td>TOTAL</td><td style="text-align:center">${filas.reduce((s,r)=>s+parseInt(r.cantidad),0)}</td><td>${pesos(totEf)}</td><td style="color:var(--bl)">${pesos(totTr)}</td><td style="color:var(--gr)">${pesos(totTotal)}</td></tr></tbody></table></div></div>`;});$('rep-cont').innerHTML=html;}catch(e){$('rep-cont').innerHTML='<div class="empty">Error al cargar</div>';}}
 
-async function loadCupos(){
-  try{
-    const cupos=await api('GET','/api/cupos');
-    if(!cupos.length){$('cupos-cont').innerHTML='<div class="card"><div class="empty">No hay encargados con cupo configurado. Editá un encargado y asignale un cupo máximo.</div></div>';return;}
-    $('cupos-cont').innerHTML=cupos.map(c=>{
-      const pct=Math.min(c.porcentaje,100);const color=pct>=100?'full':pct>=80?'warn':'ok';
-      const badge=pct>=100?'b-rd':pct>=80?'b-am':'b-gr';
-      return`<div class="cupo-card"><div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px"><div><div style="font-weight:700;font-size:14px">${c.nombre}</div><div style="font-size:12px;color:var(--text2);margin-top:2px">${c.turno||'Sin turno asignado'}</div></div><span class="badge ${badge}" style="font-size:12px;padding:5px 12px">${c.ocupados} / ${c.cupo}</span></div><div class="cupo-bar"><div class="cupo-fill ${color}" style="width:${pct}%"></div></div><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2)"><span>${c.ocupados} ocupados</span><span style="font-weight:600;color:${pct>=100?'var(--rd)':pct>=80?'var(--am)':'var(--gr)'}">Quedan ${Math.max(0,c.libres)} lugares</span></div></div>`;
-    }).join('');
-  }catch(e){$('cupos-cont').innerHTML='<div class="empty">Error al cargar</div>';}
+async function loadCupos() {
+  try {
+    const d = await api('GET', '/api/cupos');
+    const suc = d.sucursal;
+
+    function cupoBar(ocupado, cupo, label, colorClass, badgeClass) {
+      if (!cupo) {
+        return `
+          <div style="margin-bottom:14px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <span style="font-size:12px;font-weight:600;color:var(--text2)">${label}</span>
+              <span style="font-size:12px;color:var(--text3)">${ocupado} activos · <em style="color:var(--text3)">sin cupo definido</em></span>
+            </div>
+          </div>`;
+      }
+      const pct = Math.min(Math.round(ocupado / cupo * 100), 100);
+      const fillClass = pct >= 100 ? 'full' : pct >= 80 ? 'warn' : 'ok';
+      const badge = pct >= 100 ? 'b-rd' : pct >= 80 ? 'b-am' : 'b-gr';
+      return `
+        <div style="margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <span style="font-size:12px;font-weight:600;color:var(--text2)">${label}</span>
+            <span class="badge ${badge}">${ocupado} / ${cupo}</span>
+          </div>
+          <div class="cupo-bar"><div class="cupo-fill ${fillClass}" style="width:${pct}%"></div></div>
+          <div style="font-size:11px;color:var(--text3);margin-top:3px;text-align:right">
+            ${pct >= 100 ? '<strong style="color:var(--rd)">¡Cupo completo!</strong>' : `Quedan <strong>${cupo - ocupado}</strong> lugares`}
+          </div>
+        </div>`;
+    }
+
+    // Total general
+    const totalPct = d.cupo_total
+      ? Math.min(Math.round(d.ocupado_total / d.cupo_total * 100), 100) : null;
+    const totalColor = totalPct >= 100 ? 'var(--rd)' : totalPct >= 80 ? 'var(--am)' : 'var(--gr)';
+
+    const resumenTotal = d.cupo_total
+      ? `<div style="background:var(--bg);border-radius:10px;padding:12px 16px;margin-bottom:16px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+           <span style="font-weight:700">Total playa</span>
+           <span style="font-size:20px;font-weight:800;color:${totalColor}">${d.ocupado_total} / ${d.cupo_total}</span>
+         </div>`
+      : `<div style="background:var(--bg);border-radius:10px;padding:12px 16px;margin-bottom:16px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+           <span style="font-weight:700">Total activos en la playa</span>
+           <span style="font-size:20px;font-weight:800">${d.ocupado_total}</span>
+         </div>`;
+
+    $('cupos-cont').innerHTML = `
+      <div class="cupo-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+          <div>
+            <div style="font-weight:700;font-size:15px">${suc.nombre}</div>
+            <div style="font-size:12px;color:var(--text3)">${suc.direccion || ''}</div>
+          </div>
+          <button class="btn btn-sm" onclick="editarCupos()"><i data-lucide="settings"></i> Configurar cupos</button>
+        </div>
+        ${resumenTotal}
+        ${cupoBar(d.ocupado_turno1, d.cupo_turno1, 'Turno 1')}
+        ${cupoBar(d.ocupado_turno2, d.cupo_turno2, 'Turno 2')}
+        ${cupoBar(d.ocupado_mensual24, d.cupo_mensual24, 'Mensual 24 hs')}
+        ${d.ocupado_otros > 0 ? `<div style="font-size:11px;color:var(--text3);margin-top:6px">Otras modalidades: ${d.ocupado_otros} activos</div>` : ''}
+      </div>`;
+
+    lucide.createIcons();
+  } catch (e) {
+    $('cupos-cont').innerHTML = '<div class="empty">Error al cargar</div>';
+  }
+}
+
+function editarCupos() {
+  // Cargar valores actuales en el modal
+  api('GET', '/api/cupos').then(d => {
+    $('cupo-total').value   = d.cupo_total   || '';
+    $('cupo-turno1').value  = d.cupo_turno1  || '';
+    $('cupo-turno2').value  = d.cupo_turno2  || '';
+    $('cupo-m24').value     = d.cupo_mensual24 || '';
+    openMo('mo-cupos');
+  });
+}
+
+async function guardarCupos() {
+  try {
+    await api('PUT', '/api/cupos', {
+      cupo_total:     parseInt($('cupo-total').value)  || null,
+      cupo_turno1:    parseInt($('cupo-turno1').value) || null,
+      cupo_turno2:    parseInt($('cupo-turno2').value) || null,
+      cupo_mensual24: parseInt($('cupo-m24').value)    || null
+    });
+    closeMo('mo-cupos');
+    loadCupos();
+    toast('Cupos guardados');
+  } catch (e) { toast(e.message, false); }
 }
 
 function renderEncs(){const tbody=$('enc-tbody');tbody.innerHTML='';USUS.forEach(u=>{const tr=document.createElement('tr');tr.innerHTML=`<td><strong>${u.nombre}</strong></td><td style="color:var(--text2)">${u.usuario}</td><td>${u.turno||'—'}</td><td>${u.cupo?`<span class="badge b-bl">${u.cupo} máx</span>`:'<span style="color:var(--text3)">Sin límite</span>'}</td><td><span class="badge ${u.rol==='admin'?'b-bl':'b-gy'}">${u.rol}</span></td><td>${u.activo?'<span class="badge b-gr">Activo</span>':'<span class="badge b-rd">Inactivo</span>'}</td><td><button class="btn btn-sm" onclick="abrirEnc(${u.id})">Editar</button></td>`;tbody.appendChild(tr);});}
