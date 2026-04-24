@@ -206,7 +206,24 @@
   <div class="comp" id="comp-body"></div>
   <div class="mf no-print"><button class="btn" onclick="closeMo('mo-comp')">Cerrar</button><button class="btn btn-p" onclick="window.print()"><i data-lucide="printer"></i> Imprimir</button></div>
 </div></div>
-
+<div class="mo" id="mo-cupos"><div class="mbox" style="max-width:420px">
+  <div class="mt">Configurar cupos de la playa</div>
+  <p style="font-size:12px;color:var(--text3);margin-bottom:16px">
+    Dejá en blanco los que no querés limitar. El total es la capacidad física de la playa.
+  </p>
+  <div class="fg"><label>🅿️ Total de lugares físicos</label><input type="number" id="cupo-total" placeholder="Sin límite total"></div>
+  <hr class="sep">
+  <div class="fg2">
+    <div class="fg"><label>Turno 1 — máx</label><input type="number" id="cupo-turno1" placeholder="Sin límite"></div>
+    <div class="fg"><label>Turno 2 — máx</label><input type="number" id="cupo-turno2" placeholder="Sin límite"></div>
+  </div>
+  <div class="fg"><label>Mensual 24 hs — máx</label><input type="number" id="cupo-m24" placeholder="Sin límite"></div>
+  <div class="mf">
+    <button class="btn" onclick="closeMo('mo-cupos')">Cancelar</button>
+    <button class="btn btn-p" onclick="guardarCupos()"><i data-lucide="save"></i> Guardar</button>
+  </div>
+</div></div>
+  
 <div class="mo" id="mo-import-preview"></div><div class="mo" id="mo-export"></div><div class="toast" id="toast"></div>
 
 <script>
