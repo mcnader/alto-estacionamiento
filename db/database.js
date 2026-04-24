@@ -83,6 +83,16 @@ async function initDb() {
     ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS cupo INTEGER DEFAULT NULL;
     ALTER TABLE clientes ADD COLUMN IF NOT EXISTS turno_encargado_id INTEGER DEFAULT NULL;
   `);
+  await pool.query(`
+    ALTER TABLE pagos ADD COLUMN IF NOT EXISTS monto_efectivo NUMERIC DEFAULT 0;
+    ALTER TABLE pagos ADD COLUMN IF NOT EXISTS monto_transferencia NUMERIC DEFAULT 0;
+    ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS cupo INTEGER DEFAULT NULL;
+    ALTER TABLE clientes ADD COLUMN IF NOT EXISTS turno_encargado_id INTEGER DEFAULT NULL;
+    ALTER TABLE sucursales ADD COLUMN IF NOT EXISTS cupo_total INTEGER DEFAULT NULL;
+    ALTER TABLE sucursales ADD COLUMN IF NOT EXISTS cupo_turno1 INTEGER DEFAULT NULL;
+    ALTER TABLE sucursales ADD COLUMN IF NOT EXISTS cupo_turno2 INTEGER DEFAULT NULL;
+    ALTER TABLE sucursales ADD COLUMN IF NOT EXISTS cupo_mensual24 INTEGER DEFAULT NULL;
+  `);
 
   // Agregar tramos 3-9 si solo existen 0-2
   const tr = await pool.query('SELECT COUNT(DISTINCT tramo) as n FROM tarifas');
