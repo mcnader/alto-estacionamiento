@@ -230,8 +230,6 @@
 <div class="mo" id="mo-import-preview"></div>
 <div class="mo" id="mo-export"></div>
 <div class="toast" id="toast"></div>
-
-<script src="/excel.js"></script>
   
 <script>
 const MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
@@ -522,4 +520,7 @@ async function guardarSuc(){const n=$('suc-nombre').value.trim();if(!n){alert('E
   try{const me=await api('GET','/api/auth/me');SES=me;await initApp();}catch(e){}
 })();
 </script>
+
+<script src="/excel.js"></script>
+
 </body></html>
