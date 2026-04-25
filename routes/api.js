@@ -51,7 +51,39 @@ router.put('/pagos/:id',admin,async(req,res)=>{try{const p=(await db().query('SE
 
 router.post('/pagos/:id/anular',admin,async(req,res)=>{try{const p=(await db().query('SELECT * FROM pagos WHERE id=$1 AND sucursal_id=$2',[req.params.id,sid(req)])).rows[0];if(!p)return res.status(404).json({error:'No encontrado'});await db().query('UPDATE pagos SET anulado=1,anulado_motivo=$1 WHERE id=$2',[req.body.motivo||'',p.id]);res.json({ok:true});}catch(e){res.status(500).json({error:e.message});}});
 
-router.get('/clientes/:id/cuenta',auth,async(req,res)=>{try{const c=(await db().query('SELECT * FROM clientes WHERE id=$1 AND sucursal_id=$2',[req.params.id,sid(req)])).rows[0];if(!c)return res.status(404).json({error:'No encontrado'});const pagos=(await db().query(`SELECT p.*,u.nombre as encargado_nombre FROM pagos p LEFT JOIN usuarios u ON u.id=p.encargado_id WHERE p.cliente_id=$1 AND p.sucursal_id=$2 ORDER BY p.mes DESC,p.created_at DESC`,[req.params.id,sid(req)])).rows;const meses={};for(const p of pagos){if(!meses[p.mes])meses[p.mes]={mes:p.mes,pagos:[],total_esperado:0,total_abonado:0};meses[p.mes].pagos.push(p);if(!p.anulado){meses[p.mes].total_esperado+=parseFloat(p.importe_esperado);meses[p.mes].total_abonado+=parseFloat(p.importe_abonado);}}const saldo_total=pagos.filter(p=>!p.anulado).reduce((s,p)=>s+(parseFloat(p.importe_abonado)-parseFloat(p.importe_esperado)),0);res.json({cliente:c,cuenta:Object.values(meses).sort((a,b)=>b.mes.localeCompare(a.mes)),saldo_total});}catch(e){res.status(500).json({error:e.message});}});
+router.get('/clientes/:id/cuenta',auth,async(req,res)=>{try{
+  const c=(await db().query('SELECT * FROM clientes WHERE id=$1 AND sucursal_id=$2',[req.params.id,sid(req)])).rows[0];
+  if(!c)return res.status(404).json({error:'No encontrado'});
+  
+  const pagos=(await db().query(
+    `SELECT p.*,u.nombre as encargado_nombre FROM pagos p 
+     LEFT JOIN usuarios u ON u.id=p.encargado_id 
+     WHERE p.cliente_id=$1 AND p.sucursal_id=$2 
+     ORDER BY p.mes DESC,p.created_at DESC`,
+    [req.params.id,sid(req)]
+  )).rows;
+  
+  const meses={};
+  for(const p of pagos){
+    if(!meses[p.mes])meses[p.mes]={mes:p.mes,pagos:[],total_esperado:0,total_abonado:0};
+    meses[p.mes].pagos.push(p);
+    if(!p.anulado){
+      // El esperado del mes es el MAYOR importe_esperado registrado, no la suma
+      meses[p.mes].total_esperado=Math.max(meses[p.mes].total_esperado, parseFloat(p.importe_esperado)||0);
+      // El abonado sí se acumula (puede haber varios pagos parciales)
+      meses[p.mes].total_abonado+=parseFloat(p.importe_abonado)||0;
+    }
+  }
+  
+  // El saldo total se calcula por mes (abonado - esperado por mes), no por pago
+  const saldo_total=Object.values(meses).reduce((s,m)=>s+(m.total_abonado-m.total_esperado),0);
+  
+  res.json({
+    cliente:c,
+    cuenta:Object.values(meses).sort((a,b)=>b.mes.localeCompare(a.mes)),
+    saldo_total
+  });
+}catch(e){res.status(500).json({error:e.message});}});
 
 router.get('/dashboard',auth,async(req,res)=>{try{const s=sid(req);const mes=new Date().toISOString().slice(0,7);const hoy=new Date().toISOString().slice(0,10);const activos=parseInt((await db().query('SELECT COUNT(*) as c FROM clientes WHERE sucursal_id=$1 AND activo=1',[s])).rows[0].c);const pagaron=parseInt((await db().query('SELECT COUNT(DISTINCT cliente_id) as c FROM pagos WHERE sucursal_id=$1 AND mes=$2 AND anulado=0',[s,mes])).rows[0].c);const recMes=parseFloat((await db().query('SELECT COALESCE(SUM(importe_abonado),0) as v FROM pagos WHERE sucursal_id=$1 AND mes=$2 AND anulado=0',[s,mes])).rows[0].v)||0;const recHoy=parseFloat((await db().query('SELECT COALESCE(SUM(importe_abonado),0) as v FROM pagos WHERE sucursal_id=$1 AND fecha=$2 AND anulado=0',[s,hoy])).rows[0].v)||0;const recEfectivo=parseFloat((await db().query('SELECT COALESCE(SUM(monto_efectivo),0) as v FROM pagos WHERE sucursal_id=$1 AND mes=$2 AND anulado=0',[s,mes])).rows[0].v)||0;const recTransferencia=parseFloat((await db().query('SELECT COALESCE(SUM(monto_transferencia),0) as v FROM pagos WHERE sucursal_id=$1 AND mes=$2 AND anulado=0',[s,mes])).rows[0].v)||0;const conSaldo=parseInt((await db().query('SELECT COUNT(DISTINCT cliente_id) as c FROM pagos WHERE sucursal_id=$1 AND mes=$2 AND anulado=0 AND importe_abonado<importe_esperado',[s,mes])).rows[0].c);res.json({activos,pagaron,sinPagar:activos-pagaron,recMes,recHoy,recEfectivo,recTransferencia,conSaldo,mes});}catch(e){res.status(500).json({error:e.message});}});
 
