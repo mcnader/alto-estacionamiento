@@ -382,7 +382,43 @@ async function initPagos(){
 async function onPagoCli(){
   calcPago();const cid=parseInt($('pago-cli').value);if(!cid){$('saldo-prev').style.display='none';return;}
   const mes=$('pago-mes').value;
-  try{const pagos=await api('GET',`/api/pagos?cliente_id=${cid}&mes=${mes}`);const a=pagos.reduce((s,p)=>s+parseFloat(p.importe_abonado),0);const e=pagos.reduce((s,p)=>s+parseFloat(p.importe_esperado),0);const sal=a-e;const sp=$('saldo-prev');if(pagos.length>0){sp.style.display='block';sp.innerHTML=`<div style="background:${sal>=0?'#e8f5ee':'#fef3db'};border:1px solid ${sal>=0?'#b8e0cb':'#e8c97a'};border-radius:10px;padding:12px 14px;margin:10px 0"><div style="font-size:10px;color:${sal>=0?'var(--gr)':'var(--am)'};text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;font-weight:600">${sal>=0?'Saldo a favor':'Saldo pendiente del mes'}</div><div style="font-size:20px;font-weight:800;color:${sal>=0?'var(--gr)':'var(--am)'}">${pesos(Math.abs(sal))}</div><div style="font-size:11px;color:#666;margin-top:3px">Abonado: ${pesos(a)} / Esperado: ${pesos(e)}</div></div>`;}else sp.style.display='none';}catch(e){$('saldo-prev').style.display='none';}
+ async function onPagoCli(){
+  calcPago();
+  const cid=parseInt($('pago-cli').value);
+  if(!cid){$('saldo-prev').style.display='none';return;}
+  const mes=$('pago-mes').value;
+  try{
+    // Traer cuenta completa del cliente para ver deuda acumulada
+    const {cuenta, saldo_total}=await api('GET',`/api/clientes/${cid}/cuenta`);
+    const mesDatos=cuenta.find(m=>m.mes===mes);
+    const saldoMesActual=mesDatos?(mesDatos.total_abonado-mesDatos.total_esperado):null;
+    // Saldo de meses ANTERIORES (excluye el mes seleccionado)
+    const saldoAnterior=cuenta.filter(m=>m.mes<mes).reduce((s,m)=>s+(m.total_abonado-m.total_esperado),0);
+    const sp=$('saldo-prev');
+    let html='';
+    if(saldoAnterior<0){
+      html+=`<div style="background:#fdeaea;border:1px solid #e8a0a0;border-radius:10px;padding:12px 14px;margin:8px 0">
+        <div style="font-size:10px;color:var(--rd);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;font-weight:600">⚠ Deuda de meses anteriores</div>
+        <div style="font-size:20px;font-weight:800;color:var(--rd)">${pesos(Math.abs(saldoAnterior))}</div>
+      </div>`;
+    }
+    if(saldoMesActual!==null){
+      const col=saldoMesActual>=0?'var(--gr)':'var(--am)';
+      const bg=saldoMesActual>=0?'#e8f5ee':'#fef3db';
+      const border=saldoMesActual>=0?'#b8e0cb':'#e8c97a';
+      html+=`<div style="background:${bg};border:1px solid ${border};border-radius:10px;padding:12px 14px;margin:8px 0">
+        <div style="font-size:10px;color:${col};text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;font-weight:600">${saldoMesActual>=0?'Saldo a favor':'Saldo pendiente del mes'}</div>
+        <div style="font-size:20px;font-weight:800;color:${col}">${pesos(Math.abs(saldoMesActual))}</div>
+        <div style="font-size:11px;color:#666;margin-top:3px">Abonado: ${pesos(mesDatos.total_abonado)} / Esperado: ${pesos(mesDatos.total_esperado)}</div>
+      </div>`;
+    }
+    if(saldoAnterior<0||saldoMesActual!==null){
+      sp.style.display='block';
+      sp.innerHTML=html;
+    } else {
+      sp.style.display='none';
+    }
+  }catch(e){$('saldo-prev').style.display='none';}
 }
 
 function calcPago(){
