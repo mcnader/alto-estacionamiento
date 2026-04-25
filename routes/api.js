@@ -110,6 +110,8 @@ router.get('/admin/ver-tarifas',admin,async(req,res)=>{
 
 router.get('/admin/crear-parcial',admin,async(req,res)=>{
   try{
+    const TRAMOS_LABELS=['1 al 10','11 al 20','21 al 31','1 al 10 (2°mes)','11 al 20 (2°mes)','21 al 31 (2°mes)','1 al 10 (3°mes)','11 al 20 (3°mes)','21 al 31 (3°mes)','1 al 10 (4°mes)'];
+    const VEH_LABELS={moto:'Moto',auto:'Auto',camioneta:'Camioneta',trafic:'Trafic',trafic_larga:'Trafic larga'};
     const s=await db().query('SELECT DISTINCT sucursal_id FROM tarifas');
     const vehs=['moto','auto','camioneta','trafic','trafic_larga'];
     let count=0;
@@ -119,7 +121,7 @@ router.get('/admin/crear-parcial',admin,async(req,res)=>{
         for(let tramo=0;tramo<10;tramo++){
           const existe=await db().query('SELECT id FROM tarifas WHERE sucursal_id=$1 AND modalidad_id=$2 AND vehiculo_id=$3 AND tramo=$4',[sid,'parcial',veh,tramo]);
           if(!existe.rows.length){
-            await db().query('INSERT INTO tarifas (sucursal_id,modalidad_id,modalidad_nombre,horario,vehiculo_id,vehiculo_label,tramo,precio) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',[sid,'parcial','Parcial','14 a 08 hs · Sáb/Dom/Fer 24hs',veh,veh,tramo,0]);
+            await db().query('INSERT INTO tarifas (sucursal_id,modalidad_id,modalidad_nombre,horario,vehiculo_id,vehiculo_label,tramo,tramo_label,precio) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',[sid,'parcial','Parcial','14 a 08 hs · Sáb/Dom/Fer 24hs',veh,VEH_LABELS[veh],tramo,TRAMOS_LABELS[tramo],0]);
             count++;
           }
         }
