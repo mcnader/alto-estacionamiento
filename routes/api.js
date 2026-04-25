@@ -108,4 +108,25 @@ router.get('/admin/ver-tarifas',admin,async(req,res)=>{
   }catch(e){res.status(500).json({error:e.message});}
 });
 
+router.get('/admin/crear-parcial',admin,async(req,res)=>{
+  try{
+    const s=await db().query('SELECT DISTINCT sucursal_id FROM tarifas');
+    const vehs=['moto','auto','camioneta','trafic','trafic_larga'];
+    let count=0;
+    for(const row of s.rows){
+      const sid=row.sucursal_id;
+      for(const veh of vehs){
+        for(let tramo=0;tramo<10;tramo++){
+          const existe=await db().query('SELECT id FROM tarifas WHERE sucursal_id=$1 AND modalidad_id=$2 AND vehiculo_id=$3 AND tramo=$4',[sid,'parcial',veh,tramo]);
+          if(!existe.rows.length){
+            await db().query('INSERT INTO tarifas (sucursal_id,modalidad_id,modalidad_nombre,horario,vehiculo_id,vehiculo_label,tramo,precio) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',[sid,'parcial','Parcial','14 a 08 hs · Sáb/Dom/Fer 24hs',veh,veh,tramo,0]);
+            count++;
+          }
+        }
+      }
+    }
+    res.json({ok:true,insertados:count});
+  }catch(e){res.status(500).json({error:e.message});}
+});
+
 module.exports=router;
