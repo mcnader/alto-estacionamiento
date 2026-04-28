@@ -387,7 +387,7 @@ async function onPagoCli(){
     // Buscar el mes más antiguo con deuda pendiente
     const mesActual=mesA();
 const c=CLIS.find(x=>x.id===cid);
-    const mesIngreso=c.ingreso?c.ingreso.slice(0,7):mesActual;
+    const mesIngreso=new Date().getFullYear()+'-01';
     let mesSugerido=null;
     let cursor=mesIngreso;
     while(cursor<=mesActual){
