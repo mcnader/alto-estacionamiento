@@ -374,6 +374,18 @@ function abrirCli(id){
   $('cli-cfm').style.display='none';
   const bw=$('cli-baja-btn');
   if(id){if(c.activo)bw.innerHTML=`<button class="btn btn-sm btn-dr" onclick="abrirBaja(${id})">Dar de baja</button>`;else bw.innerHTML=`<button class="btn btn-sm btn-gr" onclick="reactivarCli(${id})">Reactivar</button>`;}else bw.innerHTML='';
+ 
+const blpago=$('bloque-pago-inicial');
+if(!id){
+  blpago.style.display='block';
+  $('cli-prop').value='';
+  $('cli-llave').value='';
+  $('cli-total-pago').value='';
+  $('calc-proporcional').textContent='Completá modalidad y fecha de ingreso para calcular el proporcional';
+}else{
+  blpago.style.display='none';
+}
+  
   openMo('mo-cli');
 }
 
