@@ -386,17 +386,23 @@ async function onPagoCli(){
     const {cuenta}=await api('GET',`/api/clientes/${cid}/cuenta`);
     // Buscar el mes más antiguo con deuda pendiente
     const mesActual=mesA();
-const mesesConDeuda=cuenta.filter(m=>m.mes<=mesActual&&(m.total_abonado-m.total_esperado)<0).sort((a,b)=>a.mes.localeCompare(b.mes));
-// Si tiene deuda → mes más antiguo impago. Si está al día → mes siguiente
-let mesSugerido;
-if(mesesConDeuda.length>0){
-  mesSugerido=mesesConDeuda[0].mes;
-}else{
-  // Mes siguiente al actual
-  const d=new Date(mesActual+'-01');
-  d.setMonth(d.getMonth()+1);
-  mesSugerido=d.toISOString().slice(0,7);
-}
+const c=CLIS.find(x=>x.id===cid);
+    const mesIngreso=c.ingreso?c.ingreso.slice(0,7):mesActual;
+    let mesSugerido=null;
+    let cursor=mesIngreso;
+    while(cursor<=mesActual){
+      const datosMes=cuenta.find(m=>m.mes===cursor);
+      const saldoMes=datosMes?(datosMes.total_abonado-datosMes.total_esperado):null;
+      if(!datosMes||saldoMes<0){mesSugerido=cursor;break;}
+      const d=new Date(cursor+'-01');
+      d.setMonth(d.getMonth()+1);
+      cursor=d.toISOString().slice(0,7);
+    }
+    if(!mesSugerido){
+      const d=new Date(mesActual+'-01');
+      d.setMonth(d.getMonth()+1);
+      mesSugerido=d.toISOString().slice(0,7);
+    }
     
     // Actualizar el campo mes
     $('pago-mes').value=mesSugerido;
