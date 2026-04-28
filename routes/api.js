@@ -176,4 +176,37 @@ router.get('/admin/crear-tablas-estadia',admin,async(req,res)=>{
   }catch(e){res.status(500).json({error:e.message});}
 });
 
+// ===== ESTADIAS =====
+router.get('/estadias',auth,async(req,res)=>{try{const r=await db().query('SELECT * FROM estadias WHERE sucursal_id=$1 ORDER BY created_at DESC',[sid(req)]);res.json(r.rows);}catch(e){res.status(500).json({error:e.message});}});
+
+router.post('/estadias',auth,async(req,res)=>{try{const d=req.body;const r=await db().query('INSERT INTO estadias (sucursal_id,cliente_nombre,patente,vehiculo_tipo,fecha_entrada,fecha_salida,dias,importe,forma_pago,monto_efectivo,monto_transferencia,estado,obs) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *',[sid(req),d.cliente_nombre,d.patente||'',d.vehiculo_tipo||'auto',d.fecha_entrada,d.fecha_salida||null,d.dias||0,d.importe||0,d.forma_pago||'efectivo',d.monto_efectivo||0,d.monto_transferencia||0,d.estado||'activo',d.obs||'']);res.json(r.rows[0]);}catch(e){res.status(500).json({error:e.message});}});
+
+router.put('/estadias/:id',auth,async(req,res)=>{try{const d=req.body;await db().query('UPDATE estadias SET fecha_salida=$1,dias=$2,importe=$3,forma_pago=$4,monto_efectivo=$5,monto_transferencia=$6,estado=$7,obs=$8 WHERE id=$9 AND sucursal_id=$10',[d.fecha_salida,d.dias,d.importe,d.forma_pago||'efectivo',d.monto_efectivo||0,d.monto_transferencia||0,d.estado||'activo',d.obs||'',req.params.id,sid(req)]);res.json({ok:true});}catch(e){res.status(500).json({error:e.message});}});
+
+// ===== TARIFAS ESTADIA =====
+router.get('/tarifas-estadia',auth,async(req,res)=>{try{const r=await db().query('SELECT * FROM tarifas_estadia WHERE sucursal_id=$1 ORDER BY dias,vehiculo_id',[sid(req)]);res.json(r.rows);}catch(e){res.status(500).json({error:e.message});}});
+
+router.put('/tarifas-estadia',admin,async(req,res)=>{try{for(const u of req.body.updates)await db().query('UPDATE tarifas_estadia SET precio=$1 WHERE id=$2 AND sucursal_id=$3',[u.precio,u.id,sid(req)]);res.json({ok:true});}catch(e){res.status(500).json({error:e.message});}});
+
+router.get('/admin/init-tarifas-estadia',admin,async(req,res)=>{try{
+  const DIAS=[{d:1,l:'1 día'},{d:2,l:'2 días'},{d:3,l:'3 días'},{d:4,l:'4 días'},{d:5,l:'5 días'},{d:6,l:'6 días'},{d:7,l:'Semana'},{d:14,l:'2ª Semana'}];
+  const VEHS=[{id:'auto',l:'Auto'},{id:'camioneta',l:'Camioneta'},{id:'trafic',l:'Trafic'},{id:'trafic_larga',l:'Trafic Larga'}];
+  const s=await db().query('SELECT DISTINCT sucursal_id FROM estadias');
+  const sucs=s.rows.map(r=>r.sucursal_id);
+  if(!sucs.length){const all=await db().query('SELECT id FROM sucursales');sucs.push(...all.rows.map(r=>r.id));}
+  let count=0;
+  for(const sid of sucs)for(const d of DIAS)for(const v of VEHS){
+    const ex=await db().query('SELECT id FROM tarifas_estadia WHERE sucursal_id=$1 AND dias=$2 AND vehiculo_id=$3',[sid,d.d,v.id]);
+    if(!ex.rows.length){await db().query('INSERT INTO tarifas_estadia (sucursal_id,dias,dias_label,vehiculo_id,vehiculo_label,precio) VALUES ($1,$2,$3,$4,$5,$6)',[sid,d.d,d.l,v.id,v.l,0]);count++;}
+  }
+  res.json({ok:true,insertados:count});
+}catch(e){res.status(500).json({error:e.message});}});
+
+// ===== SEÑAS =====
+router.get('/señas',auth,async(req,res)=>{try{const r=await db().query('SELECT * FROM señas WHERE sucursal_id=$1 ORDER BY created_at DESC',[sid(req)]);res.json(r.rows);}catch(e){res.status(500).json({error:e.message});}});
+
+router.post('/señas',auth,async(req,res)=>{try{const d=req.body;const r=await db().query('INSERT INTO señas (sucursal_id,cliente_id,cliente_nombre,concepto,monto,fecha_entrega,estado,obs) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *',[sid(req),d.cliente_id||null,d.cliente_nombre||'',d.concepto||'llave',d.monto||0,d.fecha_entrega,d.estado||'activa',d.obs||'']);res.json(r.rows[0]);}catch(e){res.status(500).json({error:e.message});}});
+
+router.put('/señas/:id',auth,async(req,res)=>{try{const d=req.body;await db().query('UPDATE señas SET estado=$1,fecha_devolucion=$2,obs=$3 WHERE id=$4 AND sucursal_id=$5',[d.estado||'activa',d.fecha_devolucion||null,d.obs||'',req.params.id,sid(req)]);res.json({ok:true});}catch(e){res.status(500).json({error:e.message});}});
+
 module.exports=router;
