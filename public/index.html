@@ -376,7 +376,7 @@ async function reactivarCli(id){try{await api('POST',`/api/clientes/${id}/reacti
 async function initPagos(){
   const s=$('pago-cli');s.innerHTML='<option value="">— Seleccionar —</option>';
   CLIS.filter(c=>c.activo).sort((a,b)=>a.nombre.localeCompare(b.nombre)).forEach(c=>{const o=document.createElement('option');o.value=c.id;const p=[c.vehiculo1_patente,c.vehiculo2_patente].filter(Boolean).join('/');o.textContent=c.nombre+(p?' ('+p+')':'');s.appendChild(o);});
-  poblarEnc();$('pago-fecha').value=hoy();$('pago-mes').value=mesA();$('pago-ok').style.display='none';$('calc-block').style.display='none';$('saldo-prev').style.display='none';toggleMixto();await renderPrec();
+  poblarEnc();$('pago-fecha').value=hoy();$('pago-mes').value='';$('pago-ok').style.display='none';$('calc-block').style.display='none';$('saldo-prev').style.display='none';toggleMixto();await renderPrec();
 }
 
 async function onPagoCli(){
