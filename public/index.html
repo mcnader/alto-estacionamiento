@@ -256,6 +256,61 @@
   </div>
 </div></div>
 
+<div class="mo" id="mo-estadia"><div class="mbox" style="max-width:560px">
+  <div class="mt" id="mo-estadia-t">Nueva estadía</div>
+  <input type="hidden" id="est-id">
+  <div class="fg2">
+    <div class="fg"><label>Nombre cliente *</label><input type="text" id="est-nombre"></div>
+    <div class="fg"><label>Patente</label><input type="text" id="est-patente" style="text-transform:uppercase"></div>
+  </div>
+  <div class="fg2">
+    <div class="fg"><label>Tipo vehículo</label><select id="est-tipo"><option value="auto">Auto</option><option value="camioneta">Camioneta</option><option value="trafic">Trafic</option><option value="trafic_larga">Trafic Larga</option></select></div>
+    <div class="fg"><label>Fecha entrada *</label><input type="date" id="est-entrada" onchange="calcEstadia()"></div>
+  </div>
+  <div class="fg2">
+    <div class="fg"><label>Fecha salida</label><input type="date" id="est-salida" onchange="calcEstadia()"></div>
+    <div class="fg"><label>Días</label><input type="number" id="est-dias" readonly style="background:var(--bg)"></div>
+  </div>
+  <div id="est-calc" style="display:none"></div>
+  <div class="fg2">
+    <div class="fg"><label>Forma de pago</label><select id="est-forma" onchange="toggleEstMixto()"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option><option value="mixto">Mixto</option></select></div>
+    <div class="fg"><label>Importe (editable)</label><input type="number" id="est-importe" placeholder="0"></div>
+  </div>
+  <div id="est-mixto" style="display:none">
+    <div class="mixto-row">
+      <div class="fg"><label>Efectivo $</label><input type="number" id="est-efectivo" placeholder="0" oninput="calcEstMixto()"></div>
+      <div class="fg"><label>Transferencia $</label><input type="number" id="est-transferencia" placeholder="0" oninput="calcEstMixto()"></div>
+    </div>
+  </div>
+  <div class="fg"><label>Observaciones</label><input type="text" id="est-obs" placeholder="Opcional..."></div>
+  <div class="mf">
+    <button class="btn" onclick="closeMo('mo-estadia')">Cancelar</button>
+    <button class="btn btn-p" onclick="guardarEstadia()"><i data-lucide="save"></i> Guardar</button>
+  </div>
+</div></div>
+
+<div class="mo" id="mo-seña"><div class="mbox">
+  <div class="mt" id="mo-seña-t">Nueva seña</div>
+  <input type="hidden" id="sen-id">
+  <div class="fg2">
+    <div class="fg"><label>Cliente</label><select id="sen-cli"><option value="">— Esporádico —</option></select></div>
+    <div class="fg"><label>Nombre (si esporádico)</label><input type="text" id="sen-nombre" placeholder="Nombre..."></div>
+  </div>
+  <div class="fg2">
+    <div class="fg"><label>Concepto</label><select id="sen-concepto"><option value="llave">Llave</option><option value="control">Control remoto</option><option value="otro">Otro</option></select></div>
+    <div class="fg"><label>Monto seña $</label><input type="number" id="sen-monto" placeholder="0"></div>
+  </div>
+  <div class="fg2">
+    <div class="fg"><label>Fecha entrega</label><input type="date" id="sen-fecha"></div>
+    <div class="fg"><label>Estado</label><select id="sen-estado"><option value="activa">Activa</option><option value="devuelta">Devuelta</option></select></div>
+  </div>
+  <div class="fg"><label>Observaciones</label><input type="text" id="sen-obs" placeholder="Opcional..."></div>
+  <div class="mf">
+    <button class="btn" onclick="closeMo('mo-seña')">Cancelar</button>
+    <button class="btn btn-p" onclick="guardarSeña()"><i data-lucide="save"></i> Guardar</button>
+  </div>
+</div></div>
+  
 <div class="mo" id="mo-import-preview"></div>
 <div class="mo" id="mo-export"></div>
 <div class="toast" id="toast"></div>
