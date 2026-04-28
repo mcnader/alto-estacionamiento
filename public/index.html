@@ -410,7 +410,6 @@ const c=CLIS.find(x=>x.id===cid);
     const mesDatos=cuenta.find(m=>m.mes===mes);
     const saldoMesActual=mesDatos?(mesDatos.total_abonado-mesDatos.total_esperado):null;
     const saldoAnterior=cuenta.filter(m=>m.mes<mes).reduce((s,m)=>s+(m.total_abonado-m.total_esperado),0);
-    const c=CLIS.find(x=>x.id===cid);
     const f=$('pago-fecha').value||hoy();
     const dia=new Date(f+'T12:00:00').getDate();
     const tarifaMes=getTar(c.modalidad,c.vehiculo1_tipo||'auto',dia);
