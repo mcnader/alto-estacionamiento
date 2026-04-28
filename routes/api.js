@@ -131,4 +131,49 @@ router.get('/admin/crear-parcial',admin,async(req,res)=>{
   }catch(e){res.status(500).json({error:e.message});}
 });
 
+router.get('/admin/crear-tablas-estadia',admin,async(req,res)=>{
+  try{
+    await db().query(`CREATE TABLE IF NOT EXISTS estadias (
+      id SERIAL PRIMARY KEY,
+      sucursal_id INTEGER,
+      cliente_nombre VARCHAR(200),
+      patente VARCHAR(20),
+      vehiculo_tipo VARCHAR(30) DEFAULT 'auto',
+      fecha_entrada DATE,
+      fecha_salida DATE,
+      dias INTEGER,
+      importe DECIMAL(12,2) DEFAULT 0,
+      forma_pago VARCHAR(20) DEFAULT 'efectivo',
+      monto_efectivo DECIMAL(12,2) DEFAULT 0,
+      monto_transferencia DECIMAL(12,2) DEFAULT 0,
+      estado VARCHAR(20) DEFAULT 'activo',
+      obs TEXT DEFAULT '',
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+    await db().query(`CREATE TABLE IF NOT EXISTS tarifas_estadia (
+      id SERIAL PRIMARY KEY,
+      sucursal_id INTEGER,
+      dias INTEGER,
+      dias_label VARCHAR(30),
+      vehiculo_id VARCHAR(30),
+      vehiculo_label VARCHAR(30),
+      precio DECIMAL(12,2) DEFAULT 0
+    )`);
+    await db().query(`CREATE TABLE IF NOT EXISTS señas (
+      id SERIAL PRIMARY KEY,
+      sucursal_id INTEGER,
+      cliente_id INTEGER,
+      cliente_nombre VARCHAR(200),
+      concepto VARCHAR(50) DEFAULT 'llave',
+      monto DECIMAL(12,2) DEFAULT 0,
+      fecha_entrega DATE,
+      fecha_devolucion DATE,
+      estado VARCHAR(20) DEFAULT 'activa',
+      obs TEXT DEFAULT '',
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+    res.json({ok:true,msg:'Tablas creadas'});
+  }catch(e){res.status(500).json({error:e.message});}
+});
+
 module.exports=router;
