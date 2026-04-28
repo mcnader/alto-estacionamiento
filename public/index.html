@@ -437,7 +437,10 @@ function calcPago(){
   if(!c||!f){blk.style.display='none';return;}
   const dia=new Date(f+'T12:00:00').getDate();const p=getTar(c.modalidad,c.vehiculo1_tipo||'auto',dia);const t=getTramo(dia);
   blk.style.display='block';blk.innerHTML=`<div class="calc-box ${t.c}"><div class="cb-lbl">${t.l}</div><div class="cb-val">${pesos(p)}</div><div class="cb-det">${nomMod(c.modalidad)} · ${labVeh(c.vehiculo1_tipo||'auto')} · día ${dia}</div></div>`;
-  $('pago-imp').value=p;
+  // Solo actualiza el importe si no hay un mes anterior pendiente
+  const mesCampo=$('pago-mes').value;
+  const mesHoy=mesA();
+  if(mesCampo>=mesHoy){$('pago-imp').value=p;}
 }
 
 async function registrarPago(){
