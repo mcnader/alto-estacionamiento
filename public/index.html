@@ -542,6 +542,30 @@ async function renderSucs(){$('suc-tbody').innerHTML='';SUCS.forEach(s=>{const t
 function abrirSuc(id){eSuc=id||null;$('mo-suc-t').textContent=id?'Editar sucursal':'Nueva sucursal';const s=id?SUCS.find(x=>x.id===id):{};$('suc-id').value=id||'';$('suc-nombre').value=s.nombre||'';$('suc-dir').value=s.direccion||'';openMo('mo-suc');}
 async function guardarSuc(){const n=$('suc-nombre').value.trim();if(!n){alert('El nombre es obligatorio');return;}try{if(eSuc)await api('PUT',`/api/sucursales/${eSuc}`,{nombre:n,direccion:$('suc-dir').value});else await api('POST','/api/sucursales',{nombre:n,direccion:$('suc-dir').value});SUCS=await api('GET','/api/sucursales');closeMo('mo-suc');renderSucs();toast(eSuc?'Sucursal actualizada':'Sucursal creada');}catch(e){toast(e.message,false);}}
 
+function calcProporcional(){
+  const mod=$('cli-mod').value;
+  const ingreso=$('cli-ingreso').value;
+  const tipo=$('cli-v1t').value||'auto';
+  if(!mod||!ingreso){$('calc-proporcional').textContent='Completá modalidad y fecha de ingreso';return;}
+  const d=new Date(ingreso+'T12:00:00');
+  const dm=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
+  const da=d.getDate();
+  const diasRestantes=dm-da+1;
+  const tarifa=getTar(mod,tipo,da);
+  if(!tarifa){$('calc-proporcional').textContent='Sin tarifa para esta modalidad';return;}
+  const prop=Math.round(tarifa*diasRestantes/dm/1000)*1000;
+  const conIngreso=Math.round(prop*1.1/1000)*1000;
+  $('calc-proporcional').textContent=`Tarifa: ${pesos(tarifa)} · ${diasRestantes} días de ${dm} · Proporcional: ${pesos(prop)} · +10% ingreso: ${pesos(conIngreso)}`;
+  $('cli-prop').value=conIngreso;
+  actualizarTotalPago();
+}
+
+function actualizarTotalPago(){
+  const prop=parseInt($('cli-prop').value)||0;
+  const llave=parseInt($('cli-llave').value)||0;
+  $('cli-total-pago').value=prop+llave;
+}
+  
 (async()=>{
   await loadSucs();
   try{const me=await api('GET','/api/auth/me');SES=me;await initApp();}catch(e){}
