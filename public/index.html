@@ -397,7 +397,8 @@ async function onPagoCli(){
     const saldoAnterior=cuenta.filter(m=>m.mes<mes).reduce((s,m)=>s+(m.total_abonado-m.total_esperado),0);
     const c=CLIS.find(x=>x.id===cid);
     const f=$('pago-fecha').value||hoy();
-    const dia=new Date(f+'T12:00:00').getDate();
+    const mesAbona=$('pago-mes').value;
+    const dia=mesAbona&&mesAbona>mesA()?1:new Date(f+'T12:00:00').getDate();
     const tarifaMes=getTar(c.modalidad,c.vehiculo1_tipo||'auto',dia);
     const pendienteMes=saldoMesActual!==null?Math.max(0,-saldoMesActual):tarifaMes;
     const deudaAnterior=Math.max(0,-saldoAnterior);
