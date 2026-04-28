@@ -133,6 +133,18 @@
       <div id="rep-cont"></div>
     </div>
 
+  <div class="page" id="pg-estadias">
+  <div class="ph"><div class="pt">Estadías</div><button class="btn btn-p" onclick="abrirEstadia()"><i data-lucide="plus"></i> Nueva estadía</button></div>
+  <div class="tb"><select id="f-estadia-estado" onchange="renderEstadias()" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px"><option value="">Todas</option><option value="activo">Activas</option><option value="cerrado">Cerradas</option></select></div>
+  <div id="estadias-cont"></div>
+</div>
+
+<div class="page" id="pg-señas">
+  <div class="ph"><div class="pt">Señas</div><button class="btn btn-p" onclick="abrirSeña()"><i data-lucide="plus"></i> Nueva seña</button></div>
+  <div class="tb"><select id="f-seña-estado" onchange="renderSenas()" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px"><option value="">Todas</option><option value="activa">Activas</option><option value="devuelta">Devueltas</option></select></div>
+  <div id="señas-cont"></div>
+</div>
+    
     <div class="page" id="pg-cupos">
       <div class="ph"><div class="pt">Cupos por playa</div><button class="btn" onclick="loadCupos()"><i data-lucide="refresh-cw"></i> Actualizar</button></div>
       <div id="cupos-cont"></div>
