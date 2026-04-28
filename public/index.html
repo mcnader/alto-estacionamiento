@@ -380,7 +380,9 @@ async function initPagos(){
 }
 
 async function onPagoCli(){
-  calcPago();
+calcPago();
+const cid2=parseInt($('pago-cli').value);
+if(cid2){const c2=CLIS.find(x=>x.id===cid2);if(c2){const mesIngreso=new Date().getFullYear()+'-01';const mesActual=mesA();let cursor=mesIngreso;const cuentaTemp=[];fetch('/api/clientes/'+cid2+'/cuenta').then(r=>r.json()).then(data=>{const cuenta=data.cuenta||[];let mesSug=null;let cur=mesIngreso;while(cur<=mesActual){const dm=cuenta.find(m=>m.mes===cur);if(!dm||(dm.total_abonado-dm.total_esperado)<0){mesSug=cur;break;}const d=new Date(cur+'-01');d.setMonth(d.getMonth()+1);cur=d.toISOString().slice(0,7);}if(!mesSug){const d=new Date(mesActual+'-01');d.setMonth(d.getMonth()+1);mesSug=d.toISOString().slice(0,7);}$('pago-mes').value=mesSug;});}}
   const cid=parseInt($('pago-cli').value);
   if(!cid){$('saldo-prev').style.display='none';return;}
   const mes=$('pago-mes').value;
