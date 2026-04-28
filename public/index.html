@@ -168,6 +168,21 @@
   <div class="fg3"><div class="fg"><label>Tipo</label><select id="cli-v2t"><option value="">— Sin vehículo 2 —</option><option value="auto">Auto</option><option value="camioneta">Camioneta</option><option value="moto">Moto</option><option value="trafic">Trafic</option><option value="trafic_larga">Trafic larga</option></select></div><div class="fg"><label>Marca</label><input type="text" id="cli-v2m"></div><div class="fg"><label>Modelo</label><input type="text" id="cli-v2mo"></div></div>
   <div class="fg2"><div class="fg"><label>Color</label><input type="text" id="cli-v2c"></div><div class="fg"><label>Patente</label><input type="text" id="cli-v2p" style="text-transform:uppercase"></div></div>
   <hr class="sep"><div class="fg"><label>Observaciones</label><input type="text" id="cli-obs"></div>
+
+<div id="bloque-pago-inicial" style="display:none">
+  <hr class="sep">
+  <div class="ct">Pago inicial</div>
+  <div id="calc-proporcional" style="background:#fef3db;border:1px solid #e8c97a;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--am)"></div>
+  <div class="fg2">
+    <div class="fg"><label>Proporcional + ingreso (editable)</label><input type="number" id="cli-prop" placeholder="0" step="1000"></div>
+    <div class="fg"><label>Llave $</label><input type="number" id="cli-llave" placeholder="0"></div>
+  </div>
+  <div class="fg2">
+    <div class="fg"><label>Forma de pago</label><select id="cli-fpago"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option><option value="mixto">Mixto</option></select></div>
+    <div class="fg"><label>Total a cobrar</label><input type="number" id="cli-total-pago" readonly style="background:var(--bg);font-weight:700"></div>
+  </div>
+</div>
+  
   <div id="cli-cfm" style="display:none"></div>
   <div class="mfs"><div id="cli-baja-btn"></div><div style="display:flex;gap:8px"><button class="btn" onclick="closeMo('mo-cli')">Cancelar</button><button class="btn btn-p" onclick="guardarCli()"><i data-lucide="save"></i> Guardar</button></div></div>
 </div></div>
