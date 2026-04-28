@@ -376,44 +376,40 @@ async function reactivarCli(id){try{await api('POST',`/api/clientes/${id}/reacti
 async function initPagos(){
   const s=$('pago-cli');s.innerHTML='<option value="">— Seleccionar —</option>';
   CLIS.filter(c=>c.activo).sort((a,b)=>a.nombre.localeCompare(b.nombre)).forEach(c=>{const o=document.createElement('option');o.value=c.id;const p=[c.vehiculo1_patente,c.vehiculo2_patente].filter(Boolean).join('/');o.textContent=c.nombre+(p?' ('+p+')':'');s.appendChild(o);});
-  poblarEnc();$('pago-fecha').value=hoy();$('pago-mes').value=mesA();$('pago-ok').style.display='none';$('calc-block').style.display='none';$('saldo-prev').style.display='none';toggleMixto();await renderPrec();
+  poblarEnc();$('pago-fecha').value=hoy();$('pago-mes').value='';$('pago-ok').style.display='none';$('calc-block').style.display='none';$('saldo-prev').style.display='none';toggleMixto();await renderPrec();
 }
 
 async function onPagoCli(){
-calcPago();
-const cid2=parseInt($('pago-cli').value);
-if(cid2){const c2=CLIS.find(x=>x.id===cid2);if(c2){const mesIngreso=new Date().getFullYear()+'-01';const mesActual=mesA();let cursor=mesIngreso;const cuentaTemp=[];fetch('/api/clientes/'+cid2+'/cuenta').then(r=>r.json()).then(data=>{const cuenta=data.cuenta||[];let mesSug=null;let cur=mesIngreso;while(cur<=mesActual){const dm=cuenta.find(m=>m.mes===cur);if(!dm||(dm.total_abonado-dm.total_esperado)<0){mesSug=cur;break;}const d=new Date(cur+'-01');d.setMonth(d.getMonth()+1);cur=d.toISOString().slice(0,7);}if(!mesSug){const d=new Date(mesActual+'-01');d.setMonth(d.getMonth()+1);mesSug=d.toISOString().slice(0,7);}$('pago-mes').value=mesSug;});}}
+  calcPago();
   const cid=parseInt($('pago-cli').value);
   if(!cid){$('saldo-prev').style.display='none';return;}
-  const mes=$('pago-mes').value;
   try{
     const {cuenta}=await api('GET',`/api/clientes/${cid}/cuenta`);
+    // Buscar el mes más antiguo con deuda pendiente
+    const mesActual=mesA();
+    const mesesConDeuda=cuenta.filter(m=>m.mes<=mesActual&&(m.total_abonado-m.total_esperado)<0).sort((a,b)=>a.mes.localeCompare(b.mes));
+    const mesSugerido=mesesConDeuda.length>0?mesesConDeuda[0].mes:mesActual;
+    // Actualizar el campo mes
+    $('pago-mes').value=mesSugerido;
+    const mes=mesSugerido;
     const mesDatos=cuenta.find(m=>m.mes===mes);
     const saldoMesActual=mesDatos?(mesDatos.total_abonado-mesDatos.total_esperado):null;
     const saldoAnterior=cuenta.filter(m=>m.mes<mes).reduce((s,m)=>s+(m.total_abonado-m.total_esperado),0);
-
-    // Tarifa del mes (calculada por calcPago)
     const c=CLIS.find(x=>x.id===cid);
     const f=$('pago-fecha').value||hoy();
     const dia=new Date(f+'T12:00:00').getDate();
     const tarifaMes=getTar(c.modalidad,c.vehiculo1_tipo||'auto',dia);
-
-    // Saldo pendiente del mes actual (lo que falta pagar de este mes)
     const pendienteMes=saldoMesActual!==null?Math.max(0,-saldoMesActual):tarifaMes;
-    // Deuda anterior (solo si es negativa = debe)
     const deudaAnterior=Math.max(0,-saldoAnterior);
     const totalACobrar=pendienteMes+deudaAnterior;
-
     const sp=$('saldo-prev');
     let html='';
-
     if(deudaAnterior>0){
       html+=`<div style="background:#fdeaea;border:1px solid #e8a0a0;border-radius:10px;padding:12px 14px;margin:8px 0">
         <div style="font-size:10px;color:var(--rd);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;font-weight:600">⚠ Deuda de meses anteriores</div>
         <div style="font-size:18px;font-weight:800;color:var(--rd)">${pesos(deudaAnterior)}</div>
       </div>`;
     }
-
     if(saldoMesActual!==null){
       const col=saldoMesActual>=0?'var(--gr)':'var(--am)';
       const bg=saldoMesActual>=0?'#e8f5ee':'#fef3db';
@@ -424,26 +420,27 @@ if(cid2){const c2=CLIS.find(x=>x.id===cid2);if(c2){const mesIngreso=new Date().g
         <div style="font-size:11px;color:#666;margin-top:3px">Abonado: ${pesos(mesDatos.total_abonado)} / Esperado: ${pesos(mesDatos.total_esperado)}</div>
       </div>`;
     }
-
     if(totalACobrar>0){
       html+=`<div style="background:#1a1a18;border-radius:10px;padding:12px 16px;margin:8px 0;display:flex;justify-content:space-between;align-items:center">
         <div style="font-size:11px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Total a cobrar hoy</div>
         <div style="font-size:22px;font-weight:800;color:#fff">${pesos(totalACobrar)}</div>
       </div>`;
-      // Pre-completar el campo importe con el total a cobrar
       $('pago-imp').value=totalACobrar;
     }
-
     sp.style.display=html?'block':'none';
     sp.innerHTML=html;
   }catch(e){$('saldo-prev').style.display='none';}
 }
+  
 function calcPago(){
   const cid=parseInt($('pago-cli').value);const f=$('pago-fecha').value;const c=CLIS.find(x=>x.id===cid);const blk=$('calc-block');
   if(!c||!f){blk.style.display='none';return;}
   const dia=new Date(f+'T12:00:00').getDate();const p=getTar(c.modalidad,c.vehiculo1_tipo||'auto',dia);const t=getTramo(dia);
   blk.style.display='block';blk.innerHTML=`<div class="calc-box ${t.c}"><div class="cb-lbl">${t.l}</div><div class="cb-val">${pesos(p)}</div><div class="cb-det">${nomMod(c.modalidad)} · ${labVeh(c.vehiculo1_tipo||'auto')} · día ${dia}</div></div>`;
-  $('pago-imp').value=p;
+  // Solo actualiza el importe si no hay un mes anterior pendiente
+  const mesCampo=$('pago-mes').value;
+  const mesHoy=mesA();
+  if(mesCampo>=mesHoy){$('pago-imp').value=p;}
 }
 
 async function registrarPago(){
