@@ -209,4 +209,26 @@ router.post('/señas',auth,async(req,res)=>{try{const d=req.body;const r=await d
 
 router.put('/señas/:id',auth,async(req,res)=>{try{const d=req.body;await db().query('UPDATE señas SET estado=$1,fecha_devolucion=$2,obs=$3 WHERE id=$4 AND sucursal_id=$5',[d.estado||'activa',d.fecha_devolucion||null,d.obs||'',req.params.id,sid(req)]);res.json({ok:true});}catch(e){res.status(500).json({error:e.message});}});
 
+router.get('/admin/init-tarifas-estadia2',admin,async(req,res)=>{
+  try{
+    const DIAS=[{d:1,l:'1 día'},{d:2,l:'2 días'},{d:3,l:'3 días'},{d:4,l:'4 días'},{d:5,l:'5 días'},{d:6,l:'6 días'},{d:7,l:'Semana'},{d:14,l:'2ª Semana'}];
+    const VEHS=[{id:'auto',l:'Auto'},{id:'camioneta',l:'Camioneta'},{id:'trafic',l:'Trafic'},{id:'trafic_larga',l:'Trafic Larga'}];
+    const sucs=await db().query('SELECT id FROM sucursales');
+    let count=0;
+    for(const row of sucs.rows){
+      const s=row.id;
+      for(const d of DIAS){
+        for(const v of VEHS){
+          const ex=await db().query('SELECT id FROM tarifas_estadia WHERE sucursal_id=$1 AND dias=$2 AND vehiculo_id=$3',[s,d.d,v.id]);
+          if(!ex.rows.length){
+            await db().query('INSERT INTO tarifas_estadia (sucursal_id,dias,dias_label,vehiculo_id,vehiculo_label,precio) VALUES ($1,$2,$3,$4,$5,$6)',[s,d.d,d.l,v.id,v.l,0]);
+            count++;
+          }
+        }
+      }
+    }
+    res.json({ok:true,insertados:count});
+  }catch(e){res.status(500).json({error:e.message});}
+});
+
 module.exports=router;
