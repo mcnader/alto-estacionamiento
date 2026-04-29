@@ -517,8 +517,10 @@ async function onPagoCli(){
     const {cuenta}=await api('GET',`/api/clientes/${cid}/cuenta`);
     // Buscar el mes más antiguo con deuda pendiente
     const mesActual=mesA();
-    const mesesConDeuda=cuenta.filter(m=>m.mes<=mesActual&&(m.total_abonado-m.total_esperado)<0).sort((a,b)=>a.mes.localeCompare(b.mes));
-    const mesSugerido=mesesConDeuda.length>0?mesesConDeuda[0].mes:mesActual;
+    const mesesConDeuda=cuenta.filter(m=>m.mes<mesActual&&(m.total_abonado-m.total_esperado)<0).sort((a,b)=>a.mes.localeCompare(b.mes));
+    const mesActualPagado=cuenta.find(m=>m.mes===mesActual&&(m.total_abonado-m.total_esperado)>=0);
+    const mesSugerido=mesesConDeuda.length>0?mesesConDeuda[0].mes:mesActualPagado?new Date(new Date(mesActual+'-01').setMonth(new Date(mesActual+'-01').getMonth()+1)).toISOString().slice(0,7):mesActual;
+    
     // Actualizar el campo mes
     $('pago-mes').value=mesSugerido;
     const mes=mesSugerido;
