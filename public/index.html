@@ -780,7 +780,7 @@ async function guardarEstadia() {
       });
       // Si tenía seña activa, marcarla como devuelta
       if (e && e.seña_id && e.seña_estado === 'activa') {
-        await api('PUT', `/api/señas/${e.seña_id}`, {
+        await api('PUT', `/api/senas/${e.seña_id}`, {
           estado: 'devuelta',
           fecha_devolucion: $('est-salida').value || hoy(),
           obs: e.obs || ''
@@ -841,7 +841,7 @@ async function cerrarEstadia(id) {
 // ===== SEÑAS =====
 async function renderSenas(){
   try{
-    SENS=await api('GET','/api/señas');
+    SENS=await api('GET','/api/senas');
     const filtro=$('f-seña-estado').value;
     const lista=filtro?SENS.filter(s=>s.estado===filtro):SENS;
     const cont=$('señas-cont');
@@ -893,7 +893,7 @@ async function guardarSeña(){
   const monto=parseFloat($('sen-monto').value)||0;
   if(!monto){alert('Ingresá el monto');return;}
   try{
-    await api('POST','/api/señas',{
+      await api('POST','/api/senas',{
       cliente_id:cliId,
       cliente_nombre:cliNombre,
       concepto:$('sen-concepto').value,
@@ -910,7 +910,7 @@ async function guardarSeña(){
 
 async function devolverSeña(id){
   try{
-    await api('PUT',`/api/señas/${id}`,{estado:'devuelta',fecha_devolucion:hoy()});
+    await api('PUT',`/api/senas/${id}`,{estado:'devuelta',fecha_devolucion:hoy()});
     renderSenas();
     toast('Devolución registrada');
   }catch(e){toast(e.message,false);}
