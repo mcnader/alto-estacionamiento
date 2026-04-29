@@ -241,6 +241,7 @@ router.get('/admin/init-tarifas-estadia',admin,async(req,res)=>{try{
   res.json({ok:true,insertados:count});
 }catch(e){res.status(500).json({error:e.message});}});
 
+
 // ===== SEÑAS =====
 router.get('/señas', auth, async (req, res) => {
   try {
