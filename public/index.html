@@ -842,6 +842,43 @@ async function devolverSeña(id){
     toast('Devolución registrada');
   }catch(e){toast(e.message,false);}
 }
+
+async function renderTarifasEstadia(){
+  try{
+    TARS_EST=await api('GET','/api/tarifas-estadia');
+    const DIAS=[...new Set(TARS_EST.map(t=>t.dias))].sort((a,b)=>a-b);
+    const VEHS_EST=[...new Set(TARS_EST.map(t=>t.vehiculo_id))];
+    const cont=$('tar-est-cont');cont.innerHTML='';
+    const div=document.createElement('div');div.className='t-mod';
+    let g=`<div class="t-grid" style="grid-template-columns:120px repeat(${VEHS_EST.length},1fr)">
+      <div class="tgh" style="text-align:left">Período</div>
+      ${TARS_EST.filter(t=>t.dias===DIAS[0]).map(t=>`<div class="tgh">${t.vehiculo_label}</div>`).join('')}`;
+    DIAS.forEach((d,idx)=>{
+      const last=idx===DIAS.length-1?'tg-last':'';
+      const lbl=TARS_EST.find(t=>t.dias===d)?.dias_label||d+' días';
+      g+=`<div class="tgl ${last}">${lbl}</div>`;
+      VEHS_EST.forEach(v=>{
+        const t=TARS_EST.find(x=>x.dias===d&&x.vehiculo_id===v);
+        g+=`<div class="tgc ${last}"><input type="number" value="${t?t.precio:0}" data-id="${t?t.id:''}" step="1000" min="0"></div>`;
+      });
+    });
+    g+='</div>';
+    div.innerHTML=`<div class="t-hd"><strong>Tarifas por días</strong></div><div style="padding:14px 16px">${g}</div>`;
+    cont.appendChild(div);
+  }catch(e){}
+}
+
+async function guardarTarifasEstadia(){
+  const updates=[];
+  document.querySelectorAll('#tar-est-cont .tgc input').forEach(i=>{
+    if(i.dataset.id)updates.push({id:parseInt(i.dataset.id),precio:parseInt(i.value)||0});
+  });
+  try{
+    await api('PUT','/api/tarifas-estadia',{updates});
+    TARS_EST=await api('GET','/api/tarifas-estadia');
+    toast('Tarifas de estadías guardadas');
+  }catch(e){toast(e.message,false);}
+}
   
 (async()=>{
   await loadSucs();
