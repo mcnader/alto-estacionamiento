@@ -183,6 +183,14 @@ router.get('/admin/crear-tablas-estadia',admin,async(req,res)=>{
   }catch(e){res.status(500).json({error:e.message});}
 });
 
+router.get('/admin/test-senas', admin, async (req, res) => {
+  try {
+    const cols = await db().query("SELECT column_name FROM information_schema.columns WHERE table_name='señas' ORDER BY ordinal_position");
+    const data = await db().query('SELECT * FROM señas WHERE sucursal_id=$1 LIMIT 1', [sid(req)]);
+    res.json({ columnas: cols.rows.map(r=>r.column_name), filas: data.rows });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 // ===== ESTADIAS =====
 router.get('/estadias', auth, async (req, res) => {
   try {
