@@ -569,7 +569,7 @@ async function onPagoCli(){
 function calcPago(){
   const cid=parseInt($('pago-cli').value);const f=$('pago-fecha').value;const c=CLIS.find(x=>x.id===cid);const blk=$('calc-block');
   if(!c||!f){blk.style.display='none';return;}
-  const dia=new Date(f+'T12:00:00').getDate();const p=getTar(c.modalidad,c.vehiculo1_tipo||'auto',dia);const t=getTramo(dia);
+  const mesAbona=$('pago-mes').value;const dia=mesAbona&&mesAbona>mesA()?1:new Date(f+'T12:00:00').getDate();const p=getTar(c.modalidad,c.vehiculo1_tipo||'auto',dia);const t=getTramo(dia);
   blk.style.display='block';blk.innerHTML=`<div class="calc-box ${t.c}"><div class="cb-lbl">${t.l}</div><div class="cb-val">${pesos(p)}</div><div class="cb-det">${nomMod(c.modalidad)} · ${labVeh(c.vehiculo1_tipo||'auto')} · día ${dia}</div></div>`;
   // Solo actualiza el importe si no hay un mes anterior pendiente
   const mesCampo=$('pago-mes').value;
