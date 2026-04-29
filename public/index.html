@@ -741,30 +741,65 @@ function calcEstMixto(){
   $('est-importe').value=ef+tr;
 }
 
-async function guardarEstadia(){
-  const nombre=$('est-nombre').value.trim();
-  if(!nombre){alert('El nombre es obligatorio');return;}
-  const entrada=$('est-entrada').value;
-  if(!entrada){alert('La fecha de entrada es obligatoria');return;}
-  const forma=$('est-forma').value;
-  let me=0,mt=0,importe=0;
-  if(forma==='mixto'){me=parseFloat($('est-efectivo').value)||0;mt=parseFloat($('est-transferencia').value)||0;importe=me+mt;}
-  else{importe=parseFloat($('est-importe').value)||0;if(forma==='efectivo')me=importe;else mt=importe;}
-  try{
-    await api('POST','/api/estadias',{
-      cliente_nombre:nombre,
-      patente:$('est-patente').value.toUpperCase(),
-      vehiculo_tipo:$('est-tipo').value,
-      fecha_entrada:entrada,
-      fecha_salida:$('est-salida').value||null,
-      dias:parseInt($('est-dias').value)||0,
-      importe,forma_pago:forma,monto_efectivo:me,monto_transferencia:mt,
-      obs:$('est-obs').value
-    });
+async function guardarEstadia() {
+  const nombre = $('est-nombre').value.trim();
+  if (!nombre) { alert('El nombre es obligatorio'); return; }
+  const entrada = $('est-entrada').value;
+  if (!entrada) { alert('La fecha de entrada es obligatoria'); return; }
+  const forma = $('est-forma').value;
+  let me = 0, mt = 0, importe = 0;
+  if (forma === 'mixto') {
+    me = parseFloat($('est-efectivo').value) || 0;
+    mt = parseFloat($('est-transferencia').value) || 0;
+    importe = me + mt;
+  } else {
+    importe = parseFloat($('est-importe').value) || 0;
+    if (forma === 'efectivo') me = importe; else mt = importe;
+  }
+
+  const estId = $('est-id').value;
+  const seña_llave = parseFloat($('est-seña').value) || 0;
+
+  try {
+    if (estId) {
+      // Cerrar estadía existente
+      const e = ESTS.find(x => x.id == estId);
+      await api('PUT', `/api/estadias/${estId}`, {
+        fecha_salida: $('est-salida').value || null,
+        dias: parseInt($('est-dias').value) || 0,
+        importe, forma_pago: forma, monto_efectivo: me, monto_transferencia: mt,
+        estado: 'cerrado', obs: $('est-obs').value
+      });
+      // Si tenía seña activa, marcarla como devuelta
+      if (e && e.seña_id && e.seña_estado === 'activa') {
+        await api('PUT', `/api/señas/${e.seña_id}`, {
+          estado: 'devuelta',
+          fecha_devolucion: $('est-salida').value || hoy(),
+          obs: e.obs || ''
+        });
+        toast('Estadía cerrada · Seña de llave devuelta ✓');
+      } else {
+        toast('Estadía cerrada');
+      }
+    } else {
+      // Nueva estadía
+      await api('POST', '/api/estadias', {
+        cliente_nombre: nombre,
+        patente: $('est-patente').value.toUpperCase(),
+        vehiculo_tipo: $('est-tipo').value,
+        fecha_entrada: entrada,
+        fecha_salida: $('est-salida').value || null,
+        dias: parseInt($('est-dias').value) || 0,
+        importe, forma_pago: forma, monto_efectivo: me, monto_transferencia: mt,
+        obs: $('est-obs').value,
+        seña_llave  // <-- va al backend para crear la seña
+      });
+      toast(seña_llave > 0 ? 'Estadía registrada · Seña de llave cargada ✓' : 'Estadía registrada');
+    }
     closeMo('mo-estadia');
     renderEstadias();
-    toast('Estadía registrada');
-  }catch(e){toast(e.message,false);}
+    if (seña_llave > 0) renderSenas(); // refrescar señas si se cargó una
+  } catch(e) { toast(e.message, false); }
 }
 
 async function cerrarEstadia(id) {
