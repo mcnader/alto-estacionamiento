@@ -242,7 +242,19 @@ router.get('/admin/init-tarifas-estadia',admin,async(req,res)=>{try{
 }catch(e){res.status(500).json({error:e.message});}});
 
 // ===== SEÑAS =====
-router.get('/señas',auth,async(req,res)=>{try{const r=await db().query('SELECT * FROM señas WHERE sucursal_id=$1 ORDER BY created_at DESC',[sid(req)]);res.json(r.rows);}catch(e){res.status(500).json({error:e.message});}});
+router.get('/señas', auth, async (req, res) => {
+  try {
+    const r = await db().query(
+      `SELECT s.*, 
+        CASE WHEN s.estadia_id IS NOT NULL THEN 'estadía' ELSE 'abono' END as origen
+       FROM señas s
+       WHERE s.sucursal_id = $1
+       ORDER BY s.created_at DESC`,
+      [sid(req)]
+    );
+    res.json(r.rows);
+  } catch(e) { res.status(500).json({error: e.message}); }
+});
 
 router.post('/señas',auth,async(req,res)=>{try{const d=req.body;const r=await db().query('INSERT INTO señas (sucursal_id,cliente_id,cliente_nombre,concepto,monto,fecha_entrega,estado,obs) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *',[sid(req),d.cliente_id||null,d.cliente_nombre||'',d.concepto||'llave',d.monto||0,d.fecha_entrega,d.estado||'activa',d.obs||'']);res.json(r.rows[0]);}catch(e){res.status(500).json({error:e.message});}});
 
