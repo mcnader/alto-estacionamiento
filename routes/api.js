@@ -131,6 +131,13 @@ router.get('/admin/crear-parcial',admin,async(req,res)=>{
   }catch(e){res.status(500).json({error:e.message});}
 });
 
+router.get('/admin/migrar-senas', admin, async (req, res) => {
+  try {
+    await db().query('ALTER TABLE señas ADD COLUMN IF NOT EXISTS estadia_id INTEGER');
+    res.json({ ok: true, msg: 'Columna estadia_id agregada' });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 router.get('/admin/crear-tablas-estadia',admin,async(req,res)=>{
   try{
     await db().query(`CREATE TABLE IF NOT EXISTS estadias (
