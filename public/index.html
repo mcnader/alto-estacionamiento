@@ -767,18 +767,30 @@ async function guardarEstadia(){
   }catch(e){toast(e.message,false);}
 }
 
-async function cerrarEstadia(id){
-  const e=ESTS.find(x=>x.id===id);
-  if(!e)return;
-  $('mo-estadia-t').textContent='Registrar salida';
-  $('est-id').value=id;
-  $('est-nombre').value=e.cliente_nombre;
-  $('est-patente').value=e.patente||'';
-  $('est-tipo').value=e.vehiculo_tipo||'auto';
-  $('est-entrada').value=e.fecha_entrada;
-  $('est-salida').value=hoy();
-  $('est-forma').value=e.forma_pago||'efectivo';
-  $('est-obs').value=e.obs||'';
+async function cerrarEstadia(id) {
+  const e = ESTS.find(x => x.id === id);
+  if (!e) return;
+  $('mo-estadia-t').textContent = 'Registrar salida';
+  $('est-id').value = id;
+  $('est-nombre').value = e.cliente_nombre;
+  $('est-patente').value = e.patente || '';
+  $('est-tipo').value = e.vehiculo_tipo || 'auto';
+  $('est-entrada').value = e.fecha_entrada;
+  $('est-salida').value = hoy();
+  $('est-forma').value = e.forma_pago || 'efectivo';
+  $('est-obs').value = e.obs || '';
+  $('est-seña').value = '';
+
+  // Mostrar seña pendiente si existe
+  if (e.seña_id && e.seña_estado === 'activa') {
+    $('est-seña-info').style.display = 'flex';
+    $('est-seña-monto').textContent = pesos(e.seña_monto) + ' — marcar como devuelta al cerrar';
+    $('est-seña').closest('.fg').style.display = 'none'; // ocultar campo de nueva seña
+  } else {
+    $('est-seña-info').style.display = 'none';
+    $('est-seña').closest('.fg').style.display = '';
+  }
+
   calcEstadia();
   openMo('mo-estadia');
 }
