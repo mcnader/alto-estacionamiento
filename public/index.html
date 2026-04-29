@@ -367,9 +367,17 @@ async function sincronizar(){
 }
 
 function toast(m,ok=true){const t=$('toast');t.textContent=m;t.style.background=ok?'#1a1a18':'#c0392b';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);}
-async function api(method,url,body){const o={method,headers:{'Content-Type':'application/json'}};if(body)o.body=JSON.stringify(body);const r=await fetch(url,o);const d=await r.json();if(!r.ok)throw new Error(d.error||'Error');return d;}
-function openMo(id){$(id).classList.add('open');}
-function closeMo(id){$(id).classList.remove('open');}
+
+  async function api(method,url,body){
+  const o={method,headers:{'Content-Type':'application/json'}};
+  if(body)o.body=JSON.stringify(body);
+  const r=await fetch(url,o);
+  const text=await r.text();
+  let d;
+  try{d=JSON.parse(text);}catch(e){if(r.status===401){location.reload();return;}throw new Error('Error de servidor');}
+  if(!r.ok)throw new Error(d.error||'Error');
+  return d;
+}
 
 async function loadSucs(){SUCS=await api('GET','/api/sucursales');const s=$('login-suc');s.innerHTML='';SUCS.forEach(x=>{const o=document.createElement('option');o.value=x.id;o.textContent=x.nombre;s.appendChild(o);});}
 async function doLogin(){const suc=$('login-suc').value,user=$('login-user').value,pass=$('login-pass').value;$('login-err').style.display='none';try{const r=await api('POST','/api/auth/login',{sucursal_id:suc,usuario:user,password:pass});SES=r.user;await initApp();}catch(e){$('login-err').textContent=e.message;$('login-err').style.display='block';}}
