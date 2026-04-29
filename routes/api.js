@@ -63,25 +63,28 @@ router.get('/clientes/:id/cuenta',auth,async(req,res)=>{try{
     [req.params.id,sid(req)]
   )).rows;
   
+  const senas=(await db().query(
+    `SELECT * FROM señas WHERE cliente_id=$1 AND sucursal_id=$2 ORDER BY created_at DESC`,
+    [req.params.id,sid(req)]
+  )).rows;
+  
   const meses={};
   for(const p of pagos){
     if(!meses[p.mes])meses[p.mes]={mes:p.mes,pagos:[],total_esperado:0,total_abonado:0};
     meses[p.mes].pagos.push(p);
     if(!p.anulado){
-      // El esperado del mes es el MAYOR importe_esperado registrado, no la suma
       meses[p.mes].total_esperado=Math.max(meses[p.mes].total_esperado, parseFloat(p.importe_esperado)||0);
-      // El abonado sí se acumula (puede haber varios pagos parciales)
       meses[p.mes].total_abonado+=parseFloat(p.importe_abonado)||0;
     }
   }
   
-  // El saldo total se calcula por mes (abonado - esperado por mes), no por pago
   const saldo_total=Object.values(meses).reduce((s,m)=>s+(m.total_abonado-m.total_esperado),0);
   
   res.json({
     cliente:c,
     cuenta:Object.values(meses).sort((a,b)=>b.mes.localeCompare(a.mes)),
-    saldo_total
+    saldo_total,
+    senas
   });
 }catch(e){res.status(500).json({error:e.message});}});
 
