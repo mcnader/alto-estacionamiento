@@ -636,6 +636,202 @@ function actualizarTotalPago(){
   const llave=parseInt($('cli-llave').value)||0;
   $('cli-total-pago').value=prop+llave;
 }
+
+// ===== ESTADIAS =====
+let TARS_EST=[],ESTS=[],SENS=[];
+
+async function renderEstadias(){
+  try{
+    TARS_EST=await api('GET','/api/tarifas-estadia');
+    ESTS=await api('GET','/api/estadias');
+    const filtro=$('f-estadia-estado').value;
+    const lista=filtro?ESTS.filter(e=>e.estado===filtro):ESTS;
+    const cont=$('estadias-cont');
+    if(!lista.length){cont.innerHTML='<div class="empty">Sin estadías</div>';return;}
+    cont.innerHTML=lista.map(e=>`
+      <div class="card" style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+          <div>
+            <div style="font-weight:700;font-size:14px">${e.cliente_nombre} <span style="font-size:12px;color:var(--text2)">${e.patente||''}</span></div>
+            <div style="font-size:12px;color:var(--text2);margin-top:2px">${labVeh(e.vehiculo_tipo)} · Entrada: ${e.fecha_entrada} ${e.fecha_salida?'· Salida: '+e.fecha_salida:''} ${e.dias?'· '+e.dias+' días':''}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:18px;font-weight:800;color:var(--gr)">${pesos(e.importe)}</div>
+            <span class="badge ${e.estado==='activo'?'b-am':'b-gr'}">${e.estado==='activo'?'Activa':'Cerrada'}</span>
+          </div>
+        </div>
+        ${e.obs?`<div style="font-size:11px;color:var(--text3);margin-top:6px">${e.obs}</div>`:''}
+        ${e.estado==='activo'?`<div style="margin-top:10px"><button class="btn btn-sm btn-p" onclick="cerrarEstadia(${e.id})">Registrar salida</button></div>`:''}
+      </div>`).join('');
+  }catch(err){$('estadias-cont').innerHTML='<div class="empty">Error al cargar</div>';}
+}
+
+function abrirEstadia(){
+  $('mo-estadia-t').textContent='Nueva estadía';
+  $('est-id').value='';
+  $('est-nombre').value='';
+  $('est-patente').value='';
+  $('est-tipo').value='auto';
+  $('est-entrada').value=hoy();
+  $('est-salida').value='';
+  $('est-dias').value='';
+  $('est-importe').value='';
+  $('est-obs').value='';
+  $('est-forma').value='efectivo';
+  $('est-calc').style.display='none';
+  toggleEstMixto();
+  openMo('mo-estadia');
+}
+
+function calcEstadia(){
+  const entrada=$('est-entrada').value;
+  const salida=$('est-salida').value;
+  const tipo=$('est-tipo').value;
+  if(!entrada){return;}
+  let dias=0;
+  if(salida){
+    const d1=new Date(entrada+'T12:00:00');
+    const d2=new Date(salida+'T12:00:00');
+    dias=Math.max(1,Math.round((d2-d1)/(1000*60*60*24)));
+    $('est-dias').value=dias;
+  }
+  if(dias>0&&TARS_EST.length){
+    const diasBuscar=dias<=6?dias:dias<=7?7:14;
+    const tar=TARS_EST.find(t=>t.dias==diasBuscar&&t.vehiculo_id===tipo);
+    const precio=tar?parseFloat(tar.precio):0;
+    $('est-importe').value=precio;
+    $('est-calc').style.display='block';
+    $('est-calc').innerHTML=`<div class="calc-box cb-t0"><div class="cb-lbl">${dias} día(s) · ${labVeh(tipo)}</div><div class="cb-val">${pesos(precio)}</div></div>`;
+  }
+}
+
+function toggleEstMixto(){
+  const f=$('est-forma').value;
+  $('est-mixto').style.display=f==='mixto'?'block':'none';
+}
+
+function calcEstMixto(){
+  const ef=parseFloat($('est-efectivo').value)||0;
+  const tr=parseFloat($('est-transferencia').value)||0;
+  $('est-importe').value=ef+tr;
+}
+
+async function guardarEstadia(){
+  const nombre=$('est-nombre').value.trim();
+  if(!nombre){alert('El nombre es obligatorio');return;}
+  const entrada=$('est-entrada').value;
+  if(!entrada){alert('La fecha de entrada es obligatoria');return;}
+  const forma=$('est-forma').value;
+  let me=0,mt=0,importe=0;
+  if(forma==='mixto'){me=parseFloat($('est-efectivo').value)||0;mt=parseFloat($('est-transferencia').value)||0;importe=me+mt;}
+  else{importe=parseFloat($('est-importe').value)||0;if(forma==='efectivo')me=importe;else mt=importe;}
+  try{
+    await api('POST','/api/estadias',{
+      cliente_nombre:nombre,
+      patente:$('est-patente').value.toUpperCase(),
+      vehiculo_tipo:$('est-tipo').value,
+      fecha_entrada:entrada,
+      fecha_salida:$('est-salida').value||null,
+      dias:parseInt($('est-dias').value)||0,
+      importe,forma_pago:forma,monto_efectivo:me,monto_transferencia:mt,
+      obs:$('est-obs').value
+    });
+    closeMo('mo-estadia');
+    renderEstadias();
+    toast('Estadía registrada');
+  }catch(e){toast(e.message,false);}
+}
+
+async function cerrarEstadia(id){
+  const e=ESTS.find(x=>x.id===id);
+  if(!e)return;
+  $('mo-estadia-t').textContent='Registrar salida';
+  $('est-id').value=id;
+  $('est-nombre').value=e.cliente_nombre;
+  $('est-patente').value=e.patente||'';
+  $('est-tipo').value=e.vehiculo_tipo||'auto';
+  $('est-entrada').value=e.fecha_entrada;
+  $('est-salida').value=hoy();
+  $('est-forma').value=e.forma_pago||'efectivo';
+  $('est-obs').value=e.obs||'';
+  calcEstadia();
+  openMo('mo-estadia');
+}
+
+// ===== SEÑAS =====
+async function renderSenas(){
+  try{
+    SENS=await api('GET','/api/señas');
+    const filtro=$('f-seña-estado').value;
+    const lista=filtro?SENS.filter(s=>s.estado===filtro):SENS;
+    const cont=$('señas-cont');
+    const total=SENS.filter(s=>s.estado==='activa').reduce((a,s)=>a+parseFloat(s.monto),0);
+    if(!lista.length){cont.innerHTML='<div class="empty">Sin señas registradas</div>';return;}
+    cont.innerHTML=`<div style="background:#fef3db;border:1px solid #e8c97a;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:var(--am);font-weight:600">Señas activas: ${pesos(total)}</div>`+
+    lista.map(s=>`
+      <div class="card" style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+          <div>
+            <div style="font-weight:700">${s.cliente_nombre}</div>
+            <div style="font-size:12px;color:var(--text2);margin-top:2px">${s.concepto} · Entregada: ${s.fecha_entrega}${s.fecha_devolucion?' · Devuelta: '+s.fecha_devolucion:''}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:18px;font-weight:800;color:${s.estado==='activa'?'var(--am)':'var(--gr)'}">${pesos(s.monto)}</div>
+            <span class="badge ${s.estado==='activa'?'b-am':'b-gr'}">${s.estado==='activa'?'Activa':'Devuelta'}</span>
+          </div>
+        </div>
+        ${s.obs?`<div style="font-size:11px;color:var(--text3);margin-top:6px">${s.obs}</div>`:''}
+        ${s.estado==='activa'?`<div style="margin-top:10px"><button class="btn btn-sm btn-gr" onclick="devolverSeña(${s.id})">Registrar devolución</button></div>`:''}
+      </div>`).join('');
+  }catch(e){$('señas-cont').innerHTML='<div class="empty">Error al cargar</div>';}
+}
+
+function abrirSeña(){
+  $('mo-seña-t').textContent='Nueva seña';
+  $('sen-id').value='';
+  const s=$('sen-cli');
+  s.innerHTML='<option value="">— Esporádico —</option>';
+  CLIS.filter(c=>c.activo).sort((a,b)=>a.nombre.localeCompare(b.nombre)).forEach(c=>{
+    const o=document.createElement('option');o.value=c.id;o.textContent=c.nombre;s.appendChild(o);
+  });
+  $('sen-nombre').value='';
+  $('sen-concepto').value='llave';
+  $('sen-monto').value='';
+  $('sen-fecha').value=hoy();
+  $('sen-estado').value='activa';
+  $('sen-obs').value='';
+  openMo('mo-seña');
+}
+
+async function guardarSeña(){
+  const cliId=parseInt($('sen-cli').value)||null;
+  const cliNombre=cliId?(CLIS.find(x=>x.id===cliId)?.nombre||''):$('sen-nombre').value.trim();
+  if(!cliNombre){alert('Ingresá el nombre del cliente');return;}
+  const monto=parseFloat($('sen-monto').value)||0;
+  if(!monto){alert('Ingresá el monto');return;}
+  try{
+    await api('POST','/api/señas',{
+      cliente_id:cliId,
+      cliente_nombre:cliNombre,
+      concepto:$('sen-concepto').value,
+      monto,
+      fecha_entrega:$('sen-fecha').value,
+      estado:$('sen-estado').value,
+      obs:$('sen-obs').value
+    });
+    closeMo('mo-seña');
+    renderSenas();
+    toast('Seña registrada');
+  }catch(e){toast(e.message,false);}
+}
+
+async function devolverSeña(id){
+  try{
+    await api('PUT',`/api/señas/${id}`,{estado:'devuelta',fecha_devolucion:hoy()});
+    renderSenas();
+    toast('Devolución registrada');
+  }catch(e){toast(e.message,false);}
+}
   
 (async()=>{
   await loadSucs();
