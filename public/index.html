@@ -311,8 +311,8 @@
   </div>
 </div></div>
 
-<div class="mo" id="mo-seña"><div class="mbox">
-  <div class="mt" id="mo-seña-t">Nueva seña</div>
+<div class="mo" id="mo-sena"><div class="mbox">
+  <div class="mt" id="mo-sena-t">Nueva seña</div>
   <input type="hidden" id="sen-id">
   <div class="fg2">
     <div class="fg"><label>Cliente</label><select id="sen-cli"><option value="">— Esporádico —</option></select></div>
@@ -870,7 +870,7 @@ async function renderSenas(){
 }
 
 function abrirSena(){
-  $('mo-seña-t').textContent='Nueva seña';
+  $('mo-sena-t').textContent='Nueva seña';
   $('sen-id').value='';
   const s=$('sen-cli');
   s.innerHTML='<option value="">— Esporádico —</option>';
@@ -902,7 +902,7 @@ async function guardarSena(){
       estado:$('sen-estado').value,
       obs:$('sen-obs').value
     });
-    closeMo('mo-seña');
+    closeMo('mo-sena');
     renderSenas();
     toast('Seña registrada');
   }catch(e){toast(e.message,false);}
