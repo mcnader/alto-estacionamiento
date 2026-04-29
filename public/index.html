@@ -519,7 +519,7 @@ async function onPagoCli(){
     const mesActual=mesA();
     const mesesConDeuda=cuenta.filter(m=>m.mes<mesActual&&(m.total_abonado-m.total_esperado)<0).sort((a,b)=>a.mes.localeCompare(b.mes));
     const ultimoMesPagado=cuenta.filter(m=>(m.total_abonado-m.total_esperado)>=0).map(m=>m.mes).sort().reverse()[0]||null;
-    const siguienteMes=(base)=>new Date(new Date(base+'-01').setMonth(new Date(base+'-01').getMonth()+1)).toISOString().slice(0,7);
+    const siguienteMes=(base)=>{const d=new Date(base+'-15');d.setMonth(d.getMonth()+1);return d.toISOString().slice(0,7);};
     const mesSugerido=mesesConDeuda.length>0?mesesConDeuda[0].mes:ultimoMesPagado&&ultimoMesPagado>=mesActual?siguienteMes(ultimoMesPagado):mesActual;
     
     // Actualizar el campo mes
