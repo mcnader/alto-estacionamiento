@@ -191,6 +191,16 @@ router.get('/admin/test-senas', admin, async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+router.get('/admin/test-senas2', admin, async (req, res) => {
+  try {
+    const r = await db().query(
+      `SELECT s.*, CASE WHEN s.estadia_id IS NOT NULL THEN 'estadía' ELSE 'abono' END as origen FROM señas s WHERE s.sucursal_id = $1 ORDER BY s.created_at DESC`,
+      [sid(req)]
+    );
+    res.json(r.rows);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 // ===== ESTADIAS =====
 router.get('/estadias', auth, async (req, res) => {
   try {
