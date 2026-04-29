@@ -290,7 +290,21 @@
       <div class="fg"><label>Transferencia $</label><input type="number" id="est-transferencia" placeholder="0" oninput="calcEstMixto()"></div>
     </div>
   </div>
-  <div class="fg"><label>Observaciones</label><input type="text" id="est-obs" placeholder="Opcional..."></div>
+ <div class="fg"><label>Observaciones</label><input type="text" id="est-obs" placeholder="Opcional..."></div>
+  
+  <hr class="sep">
+  <div class="fg2">
+    <div class="fg">
+      <label>Seña de llave $ <span style="color:var(--text3);font-weight:400;text-transform:none">(depósito — se devuelve al salir)</span></label>
+      <input type="number" id="est-seña" placeholder="0 = sin seña">
+    </div>
+    <div id="est-seña-info" style="display:none;align-items:center">
+      <div style="background:#fef3db;border:1px solid #e8c97a;border-radius:8px;padding:10px 12px;font-size:12px;color:var(--am);width:100%">
+        <strong>Seña activa:</strong> <span id="est-seña-monto"></span>
+      </div>
+    </div>
+  </div>
+
   <div class="mf">
     <button class="btn" onclick="closeMo('mo-estadia')">Cancelar</button>
     <button class="btn btn-p" onclick="guardarEstadia()"><i data-lucide="save"></i> Guardar</button>
