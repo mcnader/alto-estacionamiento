@@ -261,7 +261,7 @@ router.get('/admin/init-tarifas-estadia',admin,async(req,res)=>{try{
 
 
 // ===== SEÑAS =====
-router.get('/señas', auth, async (req, res) => {
+router.get('/senas', auth, async (req, res) => {
   try {
     const r = await db().query(
       `SELECT s.*, 
@@ -275,9 +275,9 @@ router.get('/señas', auth, async (req, res) => {
   } catch(e) { res.status(500).json({error: e.message}); }
 });
 
-router.post('/señas',auth,async(req,res)=>{try{const d=req.body;const r=await db().query('INSERT INTO señas (sucursal_id,cliente_id,cliente_nombre,concepto,monto,fecha_entrega,estado,obs) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *',[sid(req),d.cliente_id||null,d.cliente_nombre||'',d.concepto||'llave',d.monto||0,d.fecha_entrega,d.estado||'activa',d.obs||'']);res.json(r.rows[0]);}catch(e){res.status(500).json({error:e.message});}});
+router.post('/senas',auth,async(req,res)=>{try{const d=req.body;const r=await db().query('INSERT INTO señas (sucursal_id,cliente_id,cliente_nombre,concepto,monto,fecha_entrega,estado,obs) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *',[sid(req),d.cliente_id||null,d.cliente_nombre||'',d.concepto||'llave',d.monto||0,d.fecha_entrega,d.estado||'activa',d.obs||'']);res.json(r.rows[0]);}catch(e){res.status(500).json({error:e.message});}});
 
-router.put('/señas/:id',auth,async(req,res)=>{try{const d=req.body;await db().query('UPDATE señas SET estado=$1,fecha_devolucion=$2,obs=$3 WHERE id=$4 AND sucursal_id=$5',[d.estado||'activa',d.fecha_devolucion||null,d.obs||'',req.params.id,sid(req)]);res.json({ok:true});}catch(e){res.status(500).json({error:e.message});}});
+router.put('/senas/:id',auth,async(req,res)=>{try{const d=req.body;await db().query('UPDATE señas SET estado=$1,fecha_devolucion=$2,obs=$3 WHERE id=$4 AND sucursal_id=$5',[d.estado||'activa',d.fecha_devolucion||null,d.obs||'',req.params.id,sid(req)]);res.json({ok:true});}catch(e){res.status(500).json({error:e.message});}});
 
 router.get('/admin/init-tarifas-estadia2',admin,async(req,res)=>{
   try{
