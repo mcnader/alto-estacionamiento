@@ -124,7 +124,7 @@
     </div>
 
     <div class="page" id="pg-deudores">
-      <div class="ph"><div class="pt">Deudores</div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input type="month" id="deud-mes" onchange="renderDeudores()" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px"><span style="font-size:12px;color:var(--text3)">o rango:</span><input type="month" id="deud-desde" onchange="renderDeudores()" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px" placeholder="Desde"><input type="month" id="deud-hasta" onchange="renderDeudores()" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px" placeholder="Hasta"><span id="deud-total" style="font-size:12px;color:var(--rd);font-weight:600"></span></div></div>
+      <div class="ph"><div class="pt">Deudores</div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input type="month" id="deud-mes" onchange="renderDeudores()" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px"><span style="font-size:12px;color:var(--text3)">o rango:</span><button class="btn btn-sm" onclick="verTodosDeudores()">Ver todos</button><input type="month" id="deud-desde" onchange="renderDeudores()" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px" placeholder="Desde"><input type="month" id="deud-hasta" onchange="renderDeudores()" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px" placeholder="Hasta"><span id="deud-total" style="font-size:12px;color:var(--rd);font-weight:600"></span></div></div>
       <div id="deud-cont"></div>
     </div>
 
