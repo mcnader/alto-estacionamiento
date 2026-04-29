@@ -143,8 +143,8 @@
 
 <div class="page" id="pg-señas">
   <div class="ph"><div class="pt">Señas</div><button class="btn btn-p" onclick="abrirSena()"><i data-lucide="plus"></i> Nueva seña</button></div>
-  <div class="tb"><select id="f-seña-estado" onchange="renderSenas()" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px"><option value="">Todas</option><option value="activa">Activas</option><option value="devuelta">Devueltas</option></select></div>
-  <div id="señas-cont"></div>
+  <div class="tb"><select id="f-sena-estado" onchange="renderSenas()" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px"><option value="">Todas</option><option value="activa">Activas</option><option value="devuelta">Devueltas</option></select></div>
+  <div id="senas-cont"></div>
 </div>
     
     <div class="page" id="pg-cupos">
@@ -296,11 +296,11 @@
   <div class="fg2">
     <div class="fg">
       <label>Seña de llave $ <span style="color:var(--text3);font-weight:400;text-transform:none">(depósito — se devuelve al salir)</span></label>
-      <input type="number" id="est-seña" placeholder="0 = sin seña">
+      <input type="number" id="est-sena" placeholder="0 = sin seña">
     </div>
-    <div id="est-seña-info" style="display:none;align-items:center">
+    <div id="est-sena-info" style="display:none;align-items:center">
       <div style="background:#fef3db;border:1px solid #e8c97a;border-radius:8px;padding:10px 12px;font-size:12px;color:var(--am);width:100%">
-        <strong>Seña activa:</strong> <span id="est-seña-monto"></span>
+        <strong>Seña activa:</strong> <span id="est-sena-monto"></span>
       </div>
     </div>
   </div>
@@ -328,7 +328,7 @@
   </div>
   <div class="fg"><label>Observaciones</label><input type="text" id="sen-obs" placeholder="Opcional..."></div>
   <div class="mf">
-    <button class="btn" onclick="closeMo('mo-seña')">Cancelar</button>
+    <button class="btn" onclick="closeMo('mo-sena')">Cancelar</button>
     <button class="btn btn-p" onclick="guardarSena()"><i data-lucide="save"></i> Guardar</button>
   </div>
 </div></div>
@@ -711,8 +711,8 @@ function abrirEstadia(){
   $('est-forma').value='efectivo';
   $('est-calc').style.display='none';
   toggleEstMixto();
-  $('est-seña').value = '';
-$('est-seña-info').style.display = 'none';
+  $('est-sena').value = '';
+$('est-sena-info').style.display = 'none';
   openMo('mo-estadia');
 }
 
@@ -766,7 +766,7 @@ async function guardarEstadia() {
   }
 
   const estId = $('est-id').value;
-  const seña_llave = parseFloat($('est-seña').value) || 0;
+  const seña_llave = parseFloat($('est-sena').value) || 0;
 
   try {
     if (estId) {
@@ -822,16 +822,16 @@ async function cerrarEstadia(id) {
   $('est-salida').value = hoy();
   $('est-forma').value = e.forma_pago || 'efectivo';
   $('est-obs').value = e.obs || '';
-  $('est-seña').value = '';
+  $('est-sena').value = '';
 
   // Mostrar seña pendiente si existe
   if (e.seña_id && e.seña_estado === 'activa') {
-    $('est-seña-info').style.display = 'flex';
-    $('est-seña-monto').textContent = pesos(e.seña_monto) + ' — marcar como devuelta al cerrar';
-    $('est-seña').closest('.fg').style.display = 'none'; // ocultar campo de nueva seña
+    $('est-sena-info').style.display = 'flex';
+    $('est-sena-monto').textContent = pesos(e.seña_monto) + ' — marcar como devuelta al cerrar';
+    $('est-sena').closest('.fg').style.display = 'none'; // ocultar campo de nueva seña
   } else {
-    $('est-seña-info').style.display = 'none';
-    $('est-seña').closest('.fg').style.display = '';
+    $('est-sena-info').style.display = 'none';
+    $('est-sena').closest('.fg').style.display = '';
   }
 
   calcEstadia();
@@ -842,9 +842,9 @@ async function cerrarEstadia(id) {
 async function renderSenas(){
   try{
     SENS=await api('GET','/api/senas');
-    const filtro=$('f-seña-estado').value;
+    const filtro=$('f-sena-estado').value;
     const lista=filtro?SENS.filter(s=>s.estado===filtro):SENS;
-    const cont=$('señas-cont');
+    const cont=$('senas-cont');
     const total=SENS.filter(s=>s.estado==='activa').reduce((a,s)=>a+parseFloat(s.monto),0);
     if(!lista.length){cont.innerHTML='<div class="empty">Sin señas registradas</div>';return;}
     cont.innerHTML=`<div style="background:#fef3db;border:1px solid #e8c97a;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:var(--am);font-weight:600">Señas activas: ${pesos(total)}</div>`+
@@ -866,7 +866,7 @@ async function renderSenas(){
         ${s.obs?`<div style="font-size:11px;color:var(--text3);margin-top:6px">${s.obs}</div>`:''}
         ${s.estado==='activa'?`<div style="margin-top:10px"><button class="btn btn-sm btn-gr" onclick="devolverSena(${s.id})">Registrar devolución</button></div>`:''}
       </div>`).join('');
-  }catch(e){$('señas-cont').innerHTML='<div class="empty">Error al cargar</div>';}
+  }catch(e){$('senas-cont').innerHTML='<div class="empty">Error al cargar</div>';}
 }
 
 function abrirSena(){
