@@ -186,7 +186,26 @@ router.get('/admin/crear-tablas-estadia',admin,async(req,res)=>{
 // ===== ESTADIAS =====
 router.get('/estadias',auth,async(req,res)=>{try{const r=await db().query('SELECT * FROM estadias WHERE sucursal_id=$1 ORDER BY created_at DESC',[sid(req)]);res.json(r.rows);}catch(e){res.status(500).json({error:e.message});}});
 
-router.post('/estadias',auth,async(req,res)=>{try{const d=req.body;const r=await db().query('INSERT INTO estadias (sucursal_id,cliente_nombre,patente,vehiculo_tipo,fecha_entrada,fecha_salida,dias,importe,forma_pago,monto_efectivo,monto_transferencia,estado,obs) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *',[sid(req),d.cliente_nombre,d.patente||'',d.vehiculo_tipo||'auto',d.fecha_entrada,d.fecha_salida||null,d.dias||0,d.importe||0,d.forma_pago||'efectivo',d.monto_efectivo||0,d.monto_transferencia||0,d.estado||'activo',d.obs||'']);res.json(r.rows[0]);}catch(e){res.status(500).json({error:e.message});}});
+router.post('/estadias', auth, async (req, res) => {
+  try {
+    const d = req.body;
+    const r = await db().query(
+      'INSERT INTO estadias (sucursal_id,cliente_nombre,patente,vehiculo_tipo,fecha_entrada,fecha_salida,dias,importe,forma_pago,monto_efectivo,monto_transferencia,estado,obs) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *',
+      [sid(req), d.cliente_nombre, d.patente||'', d.vehiculo_tipo||'auto', d.fecha_entrada, d.fecha_salida||null, d.dias||0, d.importe||0, d.forma_pago||'efectivo', d.monto_efectivo||0, d.monto_transferencia||0, d.estado||'activo', d.obs||'']
+    );
+    const estadia = r.rows[0];
+
+    // Si viene seña de llave, crearla automáticamente vinculada a esta estadía
+    if (d.seña_llave && parseFloat(d.seña_llave) > 0) {
+      await db().query(
+        'INSERT INTO señas (sucursal_id,estadia_id,cliente_nombre,concepto,monto,fecha_entrega,estado,obs) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+        [sid(req), estadia.id, d.cliente_nombre, 'llave', parseFloat(d.seña_llave), d.fecha_entrada, 'activa', 'Estadía — ' + (d.patente||'')]
+      );
+    }
+
+    res.json(estadia);
+  } catch(e) { res.status(500).json({error: e.message}); }
+});
 
 router.put('/estadias/:id',auth,async(req,res)=>{try{const d=req.body;await db().query('UPDATE estadias SET fecha_salida=$1,dias=$2,importe=$3,forma_pago=$4,monto_efectivo=$5,monto_transferencia=$6,estado=$7,obs=$8 WHERE id=$9 AND sucursal_id=$10',[d.fecha_salida,d.dias,d.importe,d.forma_pago||'efectivo',d.monto_efectivo||0,d.monto_transferencia||0,d.estado||'activo',d.obs||'',req.params.id,sid(req)]);res.json({ok:true});}catch(e){res.status(500).json({error:e.message});}});
 
