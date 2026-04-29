@@ -142,7 +142,7 @@
 </div>
 
 <div class="page" id="pg-señas">
-  <div class="ph"><div class="pt">Señas</div><button class="btn btn-p" onclick="abrirSeña()"><i data-lucide="plus"></i> Nueva seña</button></div>
+  <div class="ph"><div class="pt">Señas</div><button class="btn btn-p" onclick="abrirSena()"><i data-lucide="plus"></i> Nueva seña</button></div>
   <div class="tb"><select id="f-seña-estado" onchange="renderSenas()" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px"><option value="">Todas</option><option value="activa">Activas</option><option value="devuelta">Devueltas</option></select></div>
   <div id="señas-cont"></div>
 </div>
@@ -329,7 +329,7 @@
   <div class="fg"><label>Observaciones</label><input type="text" id="sen-obs" placeholder="Opcional..."></div>
   <div class="mf">
     <button class="btn" onclick="closeMo('mo-seña')">Cancelar</button>
-    <button class="btn btn-p" onclick="guardarSeña()"><i data-lucide="save"></i> Guardar</button>
+    <button class="btn btn-p" onclick="guardarSena()"><i data-lucide="save"></i> Guardar</button>
   </div>
 </div></div>
   
@@ -864,12 +864,12 @@ async function renderSenas(){
           </div>
         </div>
         ${s.obs?`<div style="font-size:11px;color:var(--text3);margin-top:6px">${s.obs}</div>`:''}
-        ${s.estado==='activa'?`<div style="margin-top:10px"><button class="btn btn-sm btn-gr" onclick="devolverSeña(${s.id})">Registrar devolución</button></div>`:''}
+        ${s.estado==='activa'?`<div style="margin-top:10px"><button class="btn btn-sm btn-gr" onclick="devolverSena(${s.id})">Registrar devolución</button></div>`:''}
       </div>`).join('');
   }catch(e){$('señas-cont').innerHTML='<div class="empty">Error al cargar</div>';}
 }
 
-function abrirSeña(){
+function abrirSena(){
   $('mo-seña-t').textContent='Nueva seña';
   $('sen-id').value='';
   const s=$('sen-cli');
@@ -886,7 +886,7 @@ function abrirSeña(){
   openMo('mo-seña');
 }
 
-async function guardarSeña(){
+async function guardarSena(){
   const cliId=parseInt($('sen-cli').value)||null;
   const cliNombre=cliId?(CLIS.find(x=>x.id===cliId)?.nombre||''):$('sen-nombre').value.trim();
   if(!cliNombre){alert('Ingresá el nombre del cliente');return;}
@@ -908,7 +908,7 @@ async function guardarSeña(){
   }catch(e){toast(e.message,false);}
 }
 
-async function devolverSeña(id){
+async function devolverSena(id){
   try{
     await api('PUT',`/api/senas/${id}`,{estado:'devuelta',fecha_devolucion:hoy()});
     renderSenas();
