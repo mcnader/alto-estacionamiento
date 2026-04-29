@@ -184,7 +184,20 @@ router.get('/admin/crear-tablas-estadia',admin,async(req,res)=>{
 });
 
 // ===== ESTADIAS =====
-router.get('/estadias',auth,async(req,res)=>{try{const r=await db().query('SELECT * FROM estadias WHERE sucursal_id=$1 ORDER BY created_at DESC',[sid(req)]);res.json(r.rows);}catch(e){res.status(500).json({error:e.message});}});
+router.get('/estadias', auth, async (req, res) => {
+  try {
+    const r = await db().query(
+      `SELECT e.*, 
+        s.id as seña_id, s.monto as seña_monto, s.estado as seña_estado
+       FROM estadias e
+       LEFT JOIN señas s ON s.estadia_id = e.id AND s.concepto = 'llave'
+       WHERE e.sucursal_id = $1
+       ORDER BY e.created_at DESC`,
+      [sid(req)]
+    );
+    res.json(r.rows);
+  } catch(e) { res.status(500).json({error: e.message}); }
+});
 
 router.post('/estadias', auth, async (req, res) => {
   try {
