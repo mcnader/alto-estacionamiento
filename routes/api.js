@@ -303,6 +303,56 @@ router.get('/admin/init-tarifas-estadia2',admin,async(req,res)=>{
   }catch(e){res.status(500).json({error:e.message});}
 });
 
+router.get('/admin/crear-tabla-pasada', admin, async (req, res) => {
+  try {
+    await db().query(`CREATE TABLE IF NOT EXISTS pasada_control (
+      id SERIAL PRIMARY KEY,
+      sucursal_id INTEGER,
+      cliente_id INTEGER,
+      fecha DATE DEFAULT CURRENT_DATE,
+      presente BOOLEAN DEFAULT false,
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+    res.json({ ok: true, msg: 'Tabla creada' });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+router.get('/control', auth, async (req, res) => {
+  try {
+    const s = sid(req);
+    const r = await db().query(
+      `SELECT c.id, c.nombre, c.vehiculo1_patente, c.vehiculo2_patente, c.modalidad,
+        COALESCE(p.presente, false) as presente
+       FROM clientes c
+       LEFT JOIN pasada_control p ON p.cliente_id = c.id AND p.sucursal_id = $1
+       WHERE c.sucursal_id = $1 AND c.activo = 1
+       ORDER BY c.nombre`,
+      [s]
+    );
+    res.json(r.rows);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+router.post('/control/:id', auth, async (req, res) => {
+  try {
+    const s = sid(req);
+    const existe = await db().query('SELECT id FROM pasada_control WHERE cliente_id=$1 AND sucursal_id=$2', [req.params.id, s]);
+    if (existe.rows.length) {
+      await db().query('UPDATE pasada_control SET presente=$1 WHERE cliente_id=$2 AND sucursal_id=$3', [req.body.presente, req.params.id, s]);
+    } else {
+      await db().query('INSERT INTO pasada_control (sucursal_id, cliente_id, presente) VALUES ($1,$2,$3)', [s, req.params.id, req.body.presente]);
+    }
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+router.post('/control/limpiar', auth, async (req, res) => {
+  try {
+    await db().query('UPDATE pasada_control SET presente=false WHERE sucursal_id=$1', [sid(req)]);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 module.exports=router;
 
 
