@@ -56,6 +56,7 @@
       <div class="s-item" onclick="go('reportes')"><i data-lucide="bar-chart-2"></i> Reportes</div>
       <div class="s-item" onclick="go('cupos')"><i data-lucide="gauge"></i> Cupos por playa</div>
       <div class="s-item" onclick="go('estadias')"><i data-lucide="car"></i> Estadías</div>
+      <div class="s-item" onclick="go('control')"><i data-lucide="clipboard-check"></i> Control playa</div>
       <div class="s-item" onclick="go('señas')"><i data-lucide="key"></i> Señas</div>
       <div class="s-sec admin-only">Admin</div>
       <div class="s-item admin-only" onclick="go('usuarios')"><i data-lucide="user-cog"></i> Encargados</div>
@@ -135,6 +136,21 @@
       <div id="rep-cont"></div>
     </div>
 
+
+<div class="page" id="pg-control">
+  <div class="ph">
+    <div class="pt">Control de playa</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span id="control-contador" style="font-size:13px;color:var(--text2)"></span>
+      <button class="btn btn-dr" onclick="limpiarControl()"><i data-lucide="refresh-cw"></i> Nueva pasada</button>
+    </div>
+  </div>
+  <div class="tb">
+    <input class="si" type="text" placeholder="Buscar patente o nombre..." id="q-control" oninput="renderControl()">
+  </div>
+  <div id="control-cont"></div>
+</div>
+    
   <div class="page" id="pg-estadias">
   <div class="ph"><div class="pt">Estadías</div><button class="btn btn-p" onclick="abrirEstadia()"><i data-lucide="plus"></i> Nueva estadía</button></div>
   <div class="tb"><select id="f-estadia-estado" onchange="renderEstadias()" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px"><option value="">Todas</option><option value="activo">Activas</option><option value="cerrado">Cerradas</option></select></div>
@@ -418,6 +434,7 @@ function go(id){
   if(id==='deudores')initDeudores();
   if(id==='reportes')initReportes();
   if(id==='cupos')loadCupos();
+  if(id==='control'){CONTROL=[];renderControl();}
   if(id==='estadias')renderEstadias();
   if(id==='señas')renderSenas();
   if(id==='usuarios')renderEncs();
@@ -983,6 +1000,44 @@ async function guardarTarifasEstadia(){
     await api('PUT','/api/tarifas-estadia',{updates});
     TARS_EST=await api('GET','/api/tarifas-estadia');
     toast('Tarifas de estadías guardadas');
+  }catch(e){toast(e.message,false);}
+}
+let CONTROL=[];
+async function renderControl(){
+  try{
+    if(!CONTROL.length)CONTROL=await api('GET','/api/control');
+    const q=($('q-control').value||'').toLowerCase();
+    const lista=CONTROL.filter(c=>!q||(c.vehiculo1_patente||'').toLowerCase().includes(q)||(c.vehiculo2_patente||'').toLowerCase().includes(q)||c.nombre.toLowerCase().includes(q));
+    const presentes=CONTROL.filter(c=>c.presente).length;
+    $('control-contador').textContent=`${presentes} presentes de ${CONTROL.length}`;
+    $('control-cont').innerHTML=lista.map(c=>`
+      <div class="card" style="padding:12px 16px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;${c.presente?'border-left:4px solid var(--gr)':'border-left:4px solid var(--border)'}">
+        <label style="display:flex;align-items:center;gap:12px;cursor:pointer;flex:1">
+          <input type="checkbox" ${c.presente?'checked':''} onchange="toggleControl(${c.id},this.checked)" style="width:18px;height:18px;cursor:pointer">
+          <div>
+            <div style="font-weight:700">${c.nombre}</div>
+            <div style="font-size:12px;color:var(--text2)">${[c.vehiculo1_patente,c.vehiculo2_patente].filter(Boolean).join(' / ')||'—'} · <span class="badge b-bl">${nomMod(c.modalidad)}</span></div>
+          </div>
+        </label>
+        <span class="badge ${c.presente?'b-gr':'b-gy'}">${c.presente?'Presente':'Ausente'}</span>
+      </div>`).join('');
+  }catch(e){$('control-cont').innerHTML='<div class="empty">Error al cargar</div>';}
+}
+
+async function toggleControl(id,presente){
+  const c=CONTROL.find(x=>x.id===id);
+  if(c)c.presente=presente;
+  try{await api('POST',`/api/control/${id}`,{presente});}catch(e){}
+  renderControl();
+}
+
+async function limpiarControl(){
+  if(!confirm('¿Iniciar nueva pasada? Se borran todos los tildados.'))return;
+  try{
+    await api('POST','/api/control/limpiar',{});
+    CONTROL=[];
+    renderControl();
+    toast('Nueva pasada iniciada');
   }catch(e){toast(e.message,false);}
 }
   
