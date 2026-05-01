@@ -571,7 +571,8 @@ async function onPagoCli(){
 }
     const tarifaMes=getTar(c.modalidad,c.vehiculo1_tipo||'auto',dia);
     
-    const pendienteMes=saldoMesActual!==null?Math.max(0,-saldoMesActual):tarifaMes;
+    const tarifaParaPendiente=mesAbona&&mesAbona<mesA()&&$('pago-imp').value?parseFloat($('pago-imp').value):tarifaMes;
+    const pendienteMes=saldoMesActual!==null?Math.max(0,-saldoMesActual):tarifaParaPendiente;
     const deudaAnterior=Math.max(0,-saldoAnterior);
     const totalACobrar=pendienteMes+deudaAnterior;
     const sp=$('saldo-prev');
