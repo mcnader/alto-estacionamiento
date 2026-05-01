@@ -557,7 +557,7 @@ async function onPagoCli(){
 }else if(mesAbona&&mesAbona<mesA()){
   // Mes vencido: calcular tramo acumulado desde día 11 del mes que debía pagar
   const [ay,am]=mesAbona.split('-').map(Number);
-  const [cy,cm]=mesA().split('-').map(Number);
+  const [cy,cm]=f.slice(0,7).split('-').map(Number);
   const mesesAtras=(cy-ay)*12+(cm-am);
   const tramoBase=mesesAtras*3; // 3 tramos por mes
   const diaHoy=new Date(f+'T12:00:00').getDate();
@@ -614,7 +614,8 @@ const mesAbona=$('pago-mes').value;
 if(mesAbona&&mesAbona<mesA()){
   // Mes vencido: calcular tramo real
   const [ay,am]=mesAbona.split('-').map(Number);
-  const [cy,cm]=mesA().split('-').map(Number);
+  const fechaPago=f||hoy();
+  const [cy,cm]=fechaPago.slice(0,7).split('-').map(Number);
   const mesesAtras=(cy-ay)*12+(cm-am);
   const diaHoy=new Date(f+'T12:00:00').getDate();
   const tramoHoy=diaHoy<=10?0:diaHoy<=20?1:2;
