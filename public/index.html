@@ -543,6 +543,7 @@ async function onPagoCli(){
     
     // Actualizar el campo mes
     $('pago-mes').value=mesSugerido;
+    calcPago();
     const mes=mesSugerido;
     const mesDatos=cuenta.find(m=>m.mes===mes);
     const saldoMesActual=mesDatos?(mesDatos.total_abonado-mesDatos.total_esperado):null;
