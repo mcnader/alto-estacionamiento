@@ -629,8 +629,9 @@ blk.style.display='block';blk.innerHTML=`<div class="calc-box ${t.c}"><div class
   
   // Solo actualiza el importe si no hay un mes anterior pendiente
   const mesCampo=$('pago-mes').value;
-  const mesHoy=mesA();
-  if(mesCampo>=mesHoy){$('pago-imp').value=p;}
+const mesHoy=mesA();
+if(mesCampo>=mesHoy){$('pago-imp').value=p;}
+if(mesCampo&&mesCampo<mesHoy){return;}
 }
 
 async function registrarPago(){
