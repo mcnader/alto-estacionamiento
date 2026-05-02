@@ -93,19 +93,24 @@ router.get('/dashboard',auth,async(req,res)=>{try{const s=sid(req);const mes=new
 router.get('/resumen',auth,async(req,res)=>{try{const s=sid(req);const anio=req.query.anio||new Date().getFullYear().toString();const clientes=(await db().query('SELECT id,nombre FROM clientes WHERE sucursal_id=$1 AND activo=1 ORDER BY nombre',[s])).rows;const pagos=(await db().query(`SELECT cliente_id,mes,SUM(importe_abonado) as total FROM pagos WHERE sucursal_id=$1 AND substring(mes,1,4)=$2 AND anulado=0 GROUP BY cliente_id,mes`,[s,anio])).rows;res.json({clientes,pagos});}catch(e){res.status(500).json({error:e.message});}});
 
 router.get('/deudores',auth,async(req,res)=>{try{const s=sid(req);const {mes,desde,hasta,todos}=req.query;const clientes=(await db().query('SELECT * FROM clientes WHERE sucursal_id=$1 AND activo=1',[s])).rows;let pagos;if(todos==='1'){
-  // Buscar clientes que deben en cualquier mes hasta el actual
   const mesHoy=new Date().toISOString().slice(0,7);
-  pagos=(await db().query(`
-    SELECT cliente_id,
+  const rows=(await db().query(`
+    SELECT cliente_id,mes,
       SUM(importe_abonado) as abonado,
-      SUM(importe_esperado) as esperado
-    FROM pagos 
+      MAX(importe_esperado) as esperado
+    FROM pagos
     WHERE sucursal_id=$1 AND anulado=0 AND mes<=$2
-    GROUP BY cliente_id`,[s,mesHoy])).rows;
-  // Agregar clientes sin ningún pago como deudores del mes actual
-  const conPago=new Set(pagos.map(p=>p.cliente_id));
-  const sinPago=clientes.filter(c=>!conPago.has(c.id));
-  sinPago.forEach(c=>pagos.push({cliente_id:c.id,abonado:0,esperado:0}));
+    GROUP BY cliente_id,mes
+    HAVING SUM(importe_abonado)<MAX(importe_esperado)`,[s,mesHoy])).rows;
+  const deudaMap={};
+  rows.forEach(r=>{
+    if(!deudaMap[r.cliente_id])deudaMap[r.cliente_id]={abonado:0,esperado:0};
+    deudaMap[r.cliente_id].abonado+=parseFloat(r.abonado);
+    deudaMap[r.cliente_id].esperado+=parseFloat(r.esperado);
+  });
+  const conPago=new Set(rows.map(r=>r.cliente_id));
+  clientes.filter(c=>!conPago.has(c.id)).forEach(c=>{deudaMap[c.id]={abonado:0,esperado:0};});
+  pagos=Object.entries(deudaMap).map(([id,v])=>({cliente_id:parseInt(id),abonado:v.abonado,esperado:v.esperado}));
 }else if(desde&&hasta){pagos=(await db().query('SELECT cliente_id,SUM(importe_abonado) as abonado,SUM(importe_esperado) as esperado FROM pagos WHERE sucursal_id=$1 AND mes>=$2 AND mes<=$3 AND anulado=0 GROUP BY cliente_id',[s,desde,hasta])).rows;}else{const m=mes||new Date().toISOString().slice(0,7);pagos=(await db().query('SELECT cliente_id,SUM(importe_abonado) as abonado,MAX(importe_esperado) as esperado FROM pagos WHERE sucursal_id=$1 AND mes=$2 AND anulado=0 GROUP BY cliente_id',[s,m])).rows;}const map={};pagos.forEach(p=>map[p.cliente_id]={abonado:parseFloat(p.abonado),esperado:parseFloat(p.esperado)});const deudores=clientes.map(c=>{const p=map[c.id];if(!p)return{...c,abonado:0,esperado:0,deuda:0,sin_pago:true};const deuda=parseFloat(p.esperado)-parseFloat(p.abonado);return{...c,abonado:p.abonado,esperado:p.esperado,deuda,sin_pago:false};}).filter(c=>c.sin_pago||c.deuda>0).sort((a,b)=>b.deuda-a.deuda);res.json(deudores);}catch(e){res.status(500).json({error:e.message});}});
 router.get('/reportes/pagos',auth,async(req,res)=>{try{const s=sid(req);const {desde,hasta}=req.query;const rows=(await db().query(`SELECT substring(p.mes,1,7) as mes, c.modalidad, SUM(p.importe_abonado) as total, COALESCE(SUM(p.monto_efectivo),0) as efectivo, COALESCE(SUM(p.monto_transferencia),0) as transferencia, COUNT(*) as cantidad FROM pagos p JOIN clientes c ON c.id=p.cliente_id WHERE p.sucursal_id=$1 AND p.anulado=0 AND p.mes>=$2 AND p.mes<=$3 GROUP BY substring(p.mes,1,7),c.modalidad ORDER BY mes DESC,modalidad`,[s,desde||'2020-01',hasta||'2099-12'])).rows;res.json(rows);}catch(e){res.status(500).json({error:e.message});}});
 
