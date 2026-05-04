@@ -94,7 +94,7 @@ router.get('/resumen',auth,async(req,res)=>{try{const s=sid(req);const anio=req.
 
 router.get('/deudores',auth,async(req,res)=>{try{const s=sid(req);const {mes,desde,hasta,todos}=req.query;const clientes=(await db().query('SELECT * FROM clientes WHERE sucursal_id=$1 AND activo=1',[s])).rows;let pagos;if(todos==='1'){
   const mesHoy=new Date().toISOString().slice(0,7);
-  // Clientes con pagos parciales en algún mes
+  // Meses con pago parcial
   const rows=(await db().query(`
     SELECT cliente_id,mes,
       SUM(importe_abonado) as abonado,
@@ -109,11 +109,12 @@ router.get('/deudores',auth,async(req,res)=>{try{const s=sid(req);const {mes,des
     deudaMap[r.cliente_id].abonado+=parseFloat(r.abonado);
     deudaMap[r.cliente_id].esperado+=parseFloat(r.esperado);
   });
-  // Clientes sin ningún pago en el mes actual
-  const pagadosMesActual=new Set((await db().query(
-    'SELECT DISTINCT cliente_id FROM pagos WHERE sucursal_id=$1 AND mes=$2 AND anulado=0',[s,mesHoy]
+  // Clientes sin pago en mes actual O en mes anterior
+  const mesAnterior=new Date(new Date(mesHoy+'-15').setMonth(new Date(mesHoy+'-15').getMonth()-1)).toISOString().slice(0,7);
+  const conPagoReciente=new Set((await db().query(
+    `SELECT DISTINCT cliente_id FROM pagos WHERE sucursal_id=$1 AND mes IN ($2,$3) AND anulado=0`,[s,mesHoy,mesAnterior]
   )).rows.map(r=>r.cliente_id));
-  clientes.filter(c=>!pagadosMesActual.has(c.id)&&!deudaMap[c.id]).forEach(c=>{
+  clientes.filter(c=>!conPagoReciente.has(c.id)&&!deudaMap[c.id]).forEach(c=>{
     deudaMap[c.id]={abonado:0,esperado:0};
   });
   pagos=Object.entries(deudaMap).map(([id,v])=>({cliente_id:parseInt(id),abonado:v.abonado,esperado:v.esperado}));
