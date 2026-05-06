@@ -379,6 +379,62 @@ router.post('/control/limpiar', auth, async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+router.get('/admin/crear-tabla-horarios', admin, async (req, res) => {
+  try {
+    await db().query(`CREATE TABLE IF NOT EXISTS modalidades_horario (
+      id SERIAL PRIMARY KEY,
+      sucursal_id INTEGER,
+      modalidad_id VARCHAR(50),
+      modalidad_nombre VARCHAR(100),
+      hora_desde INTEGER,
+      hora_hasta INTEGER,
+      cuenta_cupo BOOLEAN DEFAULT true,
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+    res.json({ ok: true, msg: 'Tabla creada' });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+router.get('/admin/init-horarios', admin, async (req, res) => {
+  try {
+    const sucs = await db().query('SELECT id FROM sucursales');
+    const HORARIOS = [
+      { mod: 'mensual24', nom: 'Mensual 24 hs', desde: 0, hasta: 24 },
+      { mod: 'turno1', nom: 'Turno 1', desde: 7, hasta: 14 },
+      { mod: 'turno2', nom: 'Turno 2', desde: 14, hasta: 22 },
+      { mod: 'comercial', nom: 'Comercial', desde: 7, hasta: 22 },
+      { mod: 'parcial', nom: 'Parcial', desde: 14, hasta: 32 },
+      { mod: 'nocturno', nom: 'Nocturno', desde: 20, hasta: 32 }
+    ];
+    let count = 0;
+    for (const row of sucs.rows) {
+      for (const h of HORARIOS) {
+        const ex = await db().query('SELECT id FROM modalidades_horario WHERE sucursal_id=$1 AND modalidad_id=$2', [row.id, h.mod]);
+        if (!ex.rows.length) {
+          await db().query('INSERT INTO modalidades_horario (sucursal_id,modalidad_id,modalidad_nombre,hora_desde,hora_hasta,cuenta_cupo) VALUES ($1,$2,$3,$4,$5,$6)', [row.id, h.mod, h.nom, h.desde, h.hasta, true]);
+          count++;
+        }
+      }
+    }
+    res.json({ ok: true, insertados: count });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+router.get('/horarios', auth, async (req, res) => {
+  try {
+    const r = await db().query('SELECT * FROM modalidades_horario WHERE sucursal_id=$1 ORDER BY hora_desde', [sid(req)]);
+    res.json(r.rows);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+router.put('/horarios/:id', admin, async (req, res) => {
+  try {
+    const d = req.body;
+    await db().query('UPDATE modalidades_horario SET hora_desde=$1, hora_hasta=$2, cuenta_cupo=$3 WHERE id=$4 AND sucursal_id=$5', [d.hora_desde, d.hora_hasta, d.cuenta_cupo, req.params.id, sid(req)]);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 module.exports=router;
 
 
