@@ -105,7 +105,11 @@ router.get('/deudores',auth,async(req,res)=>{try{const s=sid(req);const {mes,des
     HAVING SUM(importe_abonado)<MAX(importe_esperado)`,[s,mesHoy])).rows;
   const deudaMap={};
   rows.forEach(r=>{
-    if(!deudaMap[r.cliente_id])deudaMap[r.cliente_id]={abonado:0,esperado:0};
+    const cid=parseInt(r.cliente_id);
+    if(!deudaMap[cid])deudaMap[cid]={abonado:0,esperado:0};
+    deudaMap[cid].abonado+=parseFloat(r.abonado);
+    deudaMap[cid].esperado+=parseFloat(r.esperado);
+  });
     deudaMap[r.cliente_id].abonado+=parseFloat(r.abonado);
     deudaMap[r.cliente_id].esperado+=parseFloat(r.esperado);
   });
