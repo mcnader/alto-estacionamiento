@@ -117,7 +117,7 @@ router.get('/deudores',auth,async(req,res)=>{try{const s=sid(req);const {mes,des
   const mesAnterior=new Date(new Date(mesHoy+'-15').setMonth(new Date(mesHoy+'-15').getMonth()-1)).toISOString().slice(0,7);
   const conPagoReciente=new Set((await db().query(
     `SELECT DISTINCT cliente_id FROM pagos WHERE sucursal_id=$1 AND mes IN ($2,$3) AND anulado=0`,[s,mesHoy,mesAnterior]
-  )).rows.map(r=>r.cliente_id));
+  )).rows.map(r=>parseInt(r.cliente_id));
   clientes.filter(c=>!conPagoReciente.has(c.id)&&!deudaMap[c.id]).forEach(c=>{
     deudaMap[c.id]={abonado:0,esperado:0};
   });
