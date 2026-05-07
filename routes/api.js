@@ -20,7 +20,6 @@ router.post('/usuarios',admin,async(req,res)=>{try{const {nombre,usuario,passwor
 
 router.put('/usuarios/:id',admin,async(req,res)=>{try{const u=(await db().query('SELECT * FROM usuarios WHERE id=$1 AND sucursal_id=$2',[req.params.id,sid(req)])).rows[0];if(!u)return res.status(404).json({error:'No encontrado'});await db().query('UPDATE usuarios SET nombre=$1,turno=$2,rol=$3,activo=$4,cupo=$5 WHERE id=$6',[req.body.nombre||u.nombre,req.body.turno??u.turno??'',req.body.rol||u.rol,req.body.activo!==undefined?req.body.activo:u.activo,req.body.cupo!==undefined?req.body.cupo||null:u.cupo,u.id]);if(req.body.password)await db().query('UPDATE usuarios SET password=$1 WHERE id=$2',[bcrypt.hashSync(req.body.password,10),u.id]);res.json({ok:true});}catch(e){res.status(500).json({error:e.message});}});
 
-// CUPOS por playa
 router.get('/cupos',auth,async(req,res)=>{try{const s=sid(req);const suc=(await db().query('SELECT * FROM sucursales WHERE id=$1',[s])).rows[0];const tots=(await db().query('SELECT modalidad,COUNT(*) as c FROM clientes WHERE sucursal_id=$1 AND activo=1 GROUP BY modalidad',[s])).rows;const cnt={};tots.forEach(r=>{cnt[r.modalidad]=parseInt(r.c);});const turno1=cnt['turno1']||0;const turno2=cnt['turno2']||0;const mensual24=cnt['mensual24']||0;const otros=Object.entries(cnt).filter(([k])=>!['turno1','turno2','mensual24'].includes(k)).reduce((s,[,v])=>s+v,0);const estadiasActivas=parseInt((await db().query('SELECT COUNT(*) as c FROM estadias WHERE sucursal_id=$1 AND estado=$2',[s,'activo'])).rows[0].c)||0;const total=turno1+turno2+mensual24+otros+estadiasActivas;res.json({sucursal:suc,cupo_total:suc.cupo_total,cupo_turno1:suc.cupo_turno1,cupo_turno2:suc.cupo_turno2,cupo_mensual24:suc.cupo_mensual24,ocupado_turno1:turno1,ocupado_turno2:turno2,ocupado_mensual24:mensual24,ocupado_otros:otros,ocupado_total:total,estadias_activas:estadiasActivas});}catch(e){res.status(500).json({error:e.message});}});
 
 router.put('/cupos',auth,async(req,res)=>{try{const{cupo_total,cupo_turno1,cupo_turno2,cupo_mensual24}=req.body;await db().query('UPDATE sucursales SET cupo_total=$1,cupo_turno1=$2,cupo_turno2=$3,cupo_mensual24=$4 WHERE id=$5',[cupo_total||null,cupo_turno1||null,cupo_turno2||null,cupo_mensual24||null,sid(req)]);res.json({ok:true});}catch(e){res.status(500).json({error:e.message});}});
@@ -54,38 +53,16 @@ router.post('/pagos/:id/anular',admin,async(req,res)=>{try{const p=(await db().q
 router.get('/clientes/:id/cuenta',auth,async(req,res)=>{try{
   const c=(await db().query('SELECT * FROM clientes WHERE id=$1 AND sucursal_id=$2',[req.params.id,sid(req)])).rows[0];
   if(!c)return res.status(404).json({error:'No encontrado'});
-  
-  const pagos=(await db().query(
-    `SELECT p.*,u.nombre as encargado_nombre FROM pagos p 
-     LEFT JOIN usuarios u ON u.id=p.encargado_id 
-     WHERE p.cliente_id=$1 AND p.sucursal_id=$2 
-     ORDER BY p.mes DESC,p.created_at DESC`,
-    [req.params.id,sid(req)]
-  )).rows;
-  
-  const senas=(await db().query(
-    `SELECT * FROM señas WHERE cliente_id=$1 AND sucursal_id=$2 ORDER BY created_at DESC`,
-    [req.params.id,sid(req)]
-  )).rows;
-  
+  const pagos=(await db().query(`SELECT p.*,u.nombre as encargado_nombre FROM pagos p LEFT JOIN usuarios u ON u.id=p.encargado_id WHERE p.cliente_id=$1 AND p.sucursal_id=$2 ORDER BY p.mes DESC,p.created_at DESC`,[req.params.id,sid(req)])).rows;
+  const senas=(await db().query(`SELECT * FROM señas WHERE cliente_id=$1 AND sucursal_id=$2 ORDER BY created_at DESC`,[req.params.id,sid(req)])).rows;
   const meses={};
   for(const p of pagos){
     if(!meses[p.mes])meses[p.mes]={mes:p.mes,pagos:[],total_esperado:0,total_abonado:0};
     meses[p.mes].pagos.push(p);
-    if(!p.anulado){
-      meses[p.mes].total_esperado=Math.max(meses[p.mes].total_esperado, parseFloat(p.importe_esperado)||0);
-      meses[p.mes].total_abonado+=parseFloat(p.importe_abonado)||0;
-    }
+    if(!p.anulado){meses[p.mes].total_esperado=Math.max(meses[p.mes].total_esperado,parseFloat(p.importe_esperado)||0);meses[p.mes].total_abonado+=parseFloat(p.importe_abonado)||0;}
   }
-  
   const saldo_total=Object.values(meses).reduce((s,m)=>s+(m.total_abonado-m.total_esperado),0);
-  
-  res.json({
-    cliente:c,
-    cuenta:Object.values(meses).sort((a,b)=>b.mes.localeCompare(a.mes)),
-    saldo_total,
-    senas
-  });
+  res.json({cliente:c,cuenta:Object.values(meses).sort((a,b)=>b.mes.localeCompare(a.mes)),saldo_total,senas});
 }catch(e){res.status(500).json({error:e.message});}});
 
 router.get('/dashboard',auth,async(req,res)=>{try{const s=sid(req);const mes=new Date().toISOString().slice(0,7);const hoy=new Date().toISOString().slice(0,10);const activos=parseInt((await db().query('SELECT COUNT(*) as c FROM clientes WHERE sucursal_id=$1 AND activo=1',[s])).rows[0].c);const pagaron=parseInt((await db().query('SELECT COUNT(DISTINCT cliente_id) as c FROM pagos WHERE sucursal_id=$1 AND mes=$2 AND anulado=0',[s,mes])).rows[0].c);const recMes=parseFloat((await db().query('SELECT COALESCE(SUM(importe_abonado),0) as v FROM pagos WHERE sucursal_id=$1 AND mes=$2 AND anulado=0',[s,mes])).rows[0].v)||0;const recHoy=parseFloat((await db().query('SELECT COALESCE(SUM(importe_abonado),0) as v FROM pagos WHERE sucursal_id=$1 AND fecha=$2 AND anulado=0',[s,hoy])).rows[0].v)||0;const recEfectivo=parseFloat((await db().query('SELECT COALESCE(SUM(monto_efectivo),0) as v FROM pagos WHERE sucursal_id=$1 AND mes=$2 AND anulado=0',[s,mes])).rows[0].v)||0;const recTransferencia=parseFloat((await db().query('SELECT COALESCE(SUM(monto_transferencia),0) as v FROM pagos WHERE sucursal_id=$1 AND mes=$2 AND anulado=0',[s,mes])).rows[0].v)||0;const conSaldo=parseInt((await db().query('SELECT COUNT(DISTINCT cliente_id) as c FROM pagos WHERE sucursal_id=$1 AND mes=$2 AND anulado=0 AND importe_abonado<importe_esperado',[s,mes])).rows[0].c);res.json({activos,pagaron,sinPagar:activos-pagaron,recMes,recHoy,recEfectivo,recTransferencia,conSaldo,mes});}catch(e){res.status(500).json({error:e.message});}});
@@ -94,356 +71,65 @@ router.get('/resumen',auth,async(req,res)=>{try{const s=sid(req);const anio=req.
 
 router.get('/deudores',auth,async(req,res)=>{try{const s=sid(req);const {mes,desde,hasta,todos}=req.query;const clientes=(await db().query('SELECT * FROM clientes WHERE sucursal_id=$1 AND activo=1',[s])).rows;let pagos;if(todos==='1'){
   const mesHoy=new Date().toISOString().slice(0,7);
-  // Meses con pago parcial
-  const rows=(await db().query(`
-    SELECT cliente_id,mes,
-      SUM(importe_abonado) as abonado,
-      MAX(importe_esperado) as esperado
-    FROM pagos
-    WHERE sucursal_id=$1 AND anulado=0 AND mes<=$2
-    GROUP BY cliente_id,mes
-    HAVING SUM(importe_abonado)<MAX(importe_esperado)`,[s,mesHoy])).rows;
+  const rows=(await db().query(`SELECT cliente_id,mes,SUM(importe_abonado) as abonado,MAX(importe_esperado) as esperado FROM pagos WHERE sucursal_id=$1 AND anulado=0 AND mes<=$2 GROUP BY cliente_id,mes HAVING SUM(importe_abonado)<MAX(importe_esperado)`,[s,mesHoy])).rows;
   const deudaMap={};
-  rows.forEach(r=>{
-    const cid=parseInt(r.cliente_id);
-    if(!deudaMap[cid])deudaMap[cid]={abonado:0,esperado:0};
-    deudaMap[cid].abonado+=parseFloat(r.abonado);
-    deudaMap[cid].esperado+=parseFloat(r.esperado);
-  });
+  rows.forEach(r=>{const cid=parseInt(r.cliente_id);if(!deudaMap[cid])deudaMap[cid]={abonado:0,esperado:0};deudaMap[cid].abonado+=parseFloat(r.abonado);deudaMap[cid].esperado+=parseFloat(r.esperado);});
   const mesAnterior=new Date(new Date(mesHoy+'-15').setMonth(new Date(mesHoy+'-15').getMonth()-1)).toISOString().slice(0,7);
-  const conPagoReciente=new Set((await db().query(
-    `SELECT DISTINCT cliente_id FROM pagos WHERE sucursal_id=$1 AND mes IN ($2,$3) AND anulado=0`,[s,mesHoy,mesAnterior]
-  )).rows.map(r=>parseInt(r.cliente_id)));
-  clientes.filter(c=>!conPagoReciente.has(c.id)&&!deudaMap[c.id]).forEach(c=>{
-    deudaMap[c.id]={abonado:0,esperado:0};
-  });
-  pagos=Object.entries(deudaMap).map(([id,v])=>({cliente_id:parseInt(id),abonado:v.abonado,esperado:v.esperado}));
-  // Clientes sin pago en mes actual O en mes anterior
-  const mesAnterior=new Date(new Date(mesHoy+'-15').setMonth(new Date(mesHoy+'-15').getMonth()-1)).toISOString().slice(0,7);
-  const conPagoReciente=new Set((await db().query(
-    `SELECT DISTINCT cliente_id FROM pagos WHERE sucursal_id=$1 AND mes IN ($2,$3) AND anulado=0`,[s,mesHoy,mesAnterior]
-  )).rows.map(r=>parseInt(r.cliente_id));
-  clientes.filter(c=>!conPagoReciente.has(c.id)&&!deudaMap[c.id]).forEach(c=>{
-    deudaMap[c.id]={abonado:0,esperado:0};
-  });
+  const conPagoReciente=new Set((await db().query(`SELECT DISTINCT cliente_id FROM pagos WHERE sucursal_id=$1 AND mes IN ($2,$3) AND anulado=0`,[s,mesHoy,mesAnterior])).rows.map(r=>parseInt(r.cliente_id)));
+  clientes.filter(c=>!conPagoReciente.has(c.id)&&!deudaMap[c.id]).forEach(c=>{deudaMap[c.id]={abonado:0,esperado:0};});
   pagos=Object.entries(deudaMap).map(([id,v])=>({cliente_id:parseInt(id),abonado:v.abonado,esperado:v.esperado}));
 }else if(desde&&hasta){pagos=(await db().query('SELECT cliente_id,SUM(importe_abonado) as abonado,SUM(importe_esperado) as esperado FROM pagos WHERE sucursal_id=$1 AND mes>=$2 AND mes<=$3 AND anulado=0 GROUP BY cliente_id',[s,desde,hasta])).rows;}else{const m=mes||new Date().toISOString().slice(0,7);pagos=(await db().query('SELECT cliente_id,SUM(importe_abonado) as abonado,MAX(importe_esperado) as esperado FROM pagos WHERE sucursal_id=$1 AND mes=$2 AND anulado=0 GROUP BY cliente_id',[s,m])).rows;}const map={};pagos.forEach(p=>map[p.cliente_id]={abonado:parseFloat(p.abonado),esperado:parseFloat(p.esperado)});const deudores=clientes.map(c=>{const p=map[c.id];if(!p)return{...c,abonado:0,esperado:0,deuda:0,sin_pago:true};const deuda=parseFloat(p.esperado)-parseFloat(p.abonado);return{...c,abonado:p.abonado,esperado:p.esperado,deuda,sin_pago:false};}).filter(c=>c.sin_pago||c.deuda>0).sort((a,b)=>b.deuda-a.deuda);res.json(deudores);}catch(e){res.status(500).json({error:e.message});}});
+
 router.get('/reportes/pagos',auth,async(req,res)=>{try{const s=sid(req);const {desde,hasta}=req.query;const rows=(await db().query(`SELECT substring(p.mes,1,7) as mes, c.modalidad, SUM(p.importe_abonado) as total, COALESCE(SUM(p.monto_efectivo),0) as efectivo, COALESCE(SUM(p.monto_transferencia),0) as transferencia, COUNT(*) as cantidad FROM pagos p JOIN clientes c ON c.id=p.cliente_id WHERE p.sucursal_id=$1 AND p.anulado=0 AND p.mes>=$2 AND p.mes<=$3 GROUP BY substring(p.mes,1,7),c.modalidad ORDER BY mes DESC,modalidad`,[s,desde||'2020-01',hasta||'2099-12'])).rows;res.json(rows);}catch(e){res.status(500).json({error:e.message});}});
 
-router.get('/admin/fix-modalidad',admin,async(req,res)=>{
-  try{
-    await db().query("UPDATE tarifas SET modalidad_nombre='Comercial' WHERE modalidad_nombre='Mensual'");
-    await db().query("UPDATE clientes SET modalidad=replace(modalidad,'mensual','comercial') WHERE modalidad LIKE '%mensual%'");
-    res.json({ok:true,msg:'Listo'});
-  }catch(e){res.status(500).json({error:e.message});}
-});
+router.get('/admin/fix-modalidad',admin,async(req,res)=>{try{await db().query("UPDATE tarifas SET modalidad_nombre='Comercial' WHERE modalidad_nombre='Mensual'");await db().query("UPDATE clientes SET modalidad=replace(modalidad,'mensual','comercial') WHERE modalidad LIKE '%mensual%'");res.json({ok:true,msg:'Listo'});}catch(e){res.status(500).json({error:e.message});}});
 
-router.get('/admin/ver-tarifas',admin,async(req,res)=>{
-  try{
-    const t=await db().query("SELECT DISTINCT modalidad_id,modalidad_nombre,horario FROM tarifas ORDER BY modalidad_id");
-    res.json(t.rows);
-  }catch(e){res.status(500).json({error:e.message});}
-});
+router.get('/admin/ver-tarifas',admin,async(req,res)=>{try{const t=await db().query("SELECT DISTINCT modalidad_id,modalidad_nombre,horario FROM tarifas ORDER BY modalidad_id");res.json(t.rows);}catch(e){res.status(500).json({error:e.message});}});
 
-router.get('/admin/crear-parcial',admin,async(req,res)=>{
-  try{
-    const TRAMOS_LABELS=['1 al 10','11 al 20','21 al 31','1 al 10 (2°mes)','11 al 20 (2°mes)','21 al 31 (2°mes)','1 al 10 (3°mes)','11 al 20 (3°mes)','21 al 31 (3°mes)','1 al 10 (4°mes)'];
-    const VEH_LABELS={moto:'Moto',auto:'Auto',camioneta:'Camioneta',trafic:'Trafic',trafic_larga:'Trafic larga'};
-    const s=await db().query('SELECT DISTINCT sucursal_id FROM tarifas');
-    const vehs=['moto','auto','camioneta','trafic','trafic_larga'];
-    let count=0;
-    for(const row of s.rows){
-      const sid=row.sucursal_id;
-      for(const veh of vehs){
-        for(let tramo=0;tramo<10;tramo++){
-          const existe=await db().query('SELECT id FROM tarifas WHERE sucursal_id=$1 AND modalidad_id=$2 AND vehiculo_id=$3 AND tramo=$4',[sid,'parcial',veh,tramo]);
-          if(!existe.rows.length){
-            await db().query('INSERT INTO tarifas (sucursal_id,modalidad_id,modalidad_nombre,horario,vehiculo_id,vehiculo_label,tramo,tramo_label,precio) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',[sid,'parcial','Parcial','14 a 08 hs · Sáb/Dom/Fer 24hs',veh,VEH_LABELS[veh],tramo,TRAMOS_LABELS[tramo],0]);
-            count++;
-          }
-        }
-      }
-    }
-    res.json({ok:true,insertados:count});
-  }catch(e){res.status(500).json({error:e.message});}
-});
+router.get('/admin/crear-parcial',admin,async(req,res)=>{try{const TRAMOS_LABELS=['1 al 10','11 al 20','21 al 31','1 al 10 (2°mes)','11 al 20 (2°mes)','21 al 31 (2°mes)','1 al 10 (3°mes)','11 al 20 (3°mes)','21 al 31 (3°mes)','1 al 10 (4°mes)'];const VEH_LABELS={moto:'Moto',auto:'Auto',camioneta:'Camioneta',trafic:'Trafic',trafic_larga:'Trafic larga'};const s=await db().query('SELECT DISTINCT sucursal_id FROM tarifas');const vehs=['moto','auto','camioneta','trafic','trafic_larga'];let count=0;for(const row of s.rows){const sid=row.sucursal_id;for(const veh of vehs){for(let tramo=0;tramo<10;tramo++){const existe=await db().query('SELECT id FROM tarifas WHERE sucursal_id=$1 AND modalidad_id=$2 AND vehiculo_id=$3 AND tramo=$4',[sid,'parcial',veh,tramo]);if(!existe.rows.length){await db().query('INSERT INTO tarifas (sucursal_id,modalidad_id,modalidad_nombre,horario,vehiculo_id,vehiculo_label,tramo,tramo_label,precio) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',[sid,'parcial','Parcial','14 a 08 hs · Sáb/Dom/Fer 24hs',veh,VEH_LABELS[veh],tramo,TRAMOS_LABELS[tramo],0]);count++;}}}}res.json({ok:true,insertados:count});}catch(e){res.status(500).json({error:e.message});}});
 
-router.get('/admin/migrar-senas', admin, async (req, res) => {
-  try {
-    await db().query('ALTER TABLE señas ADD COLUMN IF NOT EXISTS estadia_id INTEGER');
-    res.json({ ok: true, msg: 'Columna estadia_id agregada' });
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
+router.get('/admin/migrar-senas',admin,async(req,res)=>{try{await db().query('ALTER TABLE señas ADD COLUMN IF NOT EXISTS estadia_id INTEGER');res.json({ok:true,msg:'Columna estadia_id agregada'});}catch(e){res.status(500).json({error:e.message});}});
 
-router.get('/admin/crear-tablas-estadia',admin,async(req,res)=>{
-  try{
-    await db().query(`CREATE TABLE IF NOT EXISTS estadias (
-      id SERIAL PRIMARY KEY,
-      sucursal_id INTEGER,
-      cliente_nombre VARCHAR(200),
-      patente VARCHAR(20),
-      vehiculo_tipo VARCHAR(30) DEFAULT 'auto',
-      fecha_entrada DATE,
-      fecha_salida DATE,
-      dias INTEGER,
-      importe DECIMAL(12,2) DEFAULT 0,
-      forma_pago VARCHAR(20) DEFAULT 'efectivo',
-      monto_efectivo DECIMAL(12,2) DEFAULT 0,
-      monto_transferencia DECIMAL(12,2) DEFAULT 0,
-      estado VARCHAR(20) DEFAULT 'activo',
-      obs TEXT DEFAULT '',
-      created_at TIMESTAMP DEFAULT NOW()
-    )`);
-    await db().query(`CREATE TABLE IF NOT EXISTS tarifas_estadia (
-      id SERIAL PRIMARY KEY,
-      sucursal_id INTEGER,
-      dias INTEGER,
-      dias_label VARCHAR(30),
-      vehiculo_id VARCHAR(30),
-      vehiculo_label VARCHAR(30),
-      precio DECIMAL(12,2) DEFAULT 0
-    )`);
-    await db().query(`CREATE TABLE IF NOT EXISTS señas (
-      id SERIAL PRIMARY KEY,
-      sucursal_id INTEGER,
-      cliente_id INTEGER,
-      cliente_nombre VARCHAR(200),
-      concepto VARCHAR(50) DEFAULT 'llave',
-      monto DECIMAL(12,2) DEFAULT 0,
-      fecha_entrega DATE,
-      fecha_devolucion DATE,
-      estado VARCHAR(20) DEFAULT 'activa',
-      obs TEXT DEFAULT '',
-      created_at TIMESTAMP DEFAULT NOW()
-    )`);
-    res.json({ok:true,msg:'Tablas creadas'});
-  }catch(e){res.status(500).json({error:e.message});}
-});
+router.get('/admin/crear-tablas-estadia',admin,async(req,res)=>{try{await db().query(`CREATE TABLE IF NOT EXISTS estadias (id SERIAL PRIMARY KEY,sucursal_id INTEGER,cliente_nombre VARCHAR(200),patente VARCHAR(20),vehiculo_tipo VARCHAR(30) DEFAULT 'auto',fecha_entrada DATE,fecha_salida DATE,dias INTEGER,importe DECIMAL(12,2) DEFAULT 0,forma_pago VARCHAR(20) DEFAULT 'efectivo',monto_efectivo DECIMAL(12,2) DEFAULT 0,monto_transferencia DECIMAL(12,2) DEFAULT 0,estado VARCHAR(20) DEFAULT 'activo',obs TEXT DEFAULT '',created_at TIMESTAMP DEFAULT NOW())`);await db().query(`CREATE TABLE IF NOT EXISTS tarifas_estadia (id SERIAL PRIMARY KEY,sucursal_id INTEGER,dias INTEGER,dias_label VARCHAR(30),vehiculo_id VARCHAR(30),vehiculo_label VARCHAR(30),precio DECIMAL(12,2) DEFAULT 0)`);await db().query(`CREATE TABLE IF NOT EXISTS señas (id SERIAL PRIMARY KEY,sucursal_id INTEGER,cliente_id INTEGER,cliente_nombre VARCHAR(200),concepto VARCHAR(50) DEFAULT 'llave',monto DECIMAL(12,2) DEFAULT 0,fecha_entrega DATE,fecha_devolucion DATE,estado VARCHAR(20) DEFAULT 'activa',obs TEXT DEFAULT '',created_at TIMESTAMP DEFAULT NOW())`);res.json({ok:true,msg:'Tablas creadas'});}catch(e){res.status(500).json({error:e.message});}});
 
-router.get('/admin/test-senas', admin, async (req, res) => {
-  try {
-    const cols = await db().query("SELECT column_name FROM information_schema.columns WHERE table_name='señas' ORDER BY ordinal_position");
-    const data = await db().query('SELECT * FROM señas WHERE sucursal_id=$1 LIMIT 1', [sid(req)]);
-    res.json({ columnas: cols.rows.map(r=>r.column_name), filas: data.rows });
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
+router.get('/admin/test-senas',admin,async(req,res)=>{try{const cols=await db().query("SELECT column_name FROM information_schema.columns WHERE table_name='señas' ORDER BY ordinal_position");const data=await db().query('SELECT * FROM señas WHERE sucursal_id=$1 LIMIT 1',[sid(req)]);res.json({columnas:cols.rows.map(r=>r.column_name),filas:data.rows});}catch(e){res.status(500).json({error:e.message});}});
 
-router.get('/admin/test-senas2', admin, async (req, res) => {
-  try {
-    const r = await db().query(
-      `SELECT s.*, CASE WHEN s.estadia_id IS NOT NULL THEN 'estadía' ELSE 'abono' END as origen FROM señas s WHERE s.sucursal_id = $1 ORDER BY s.created_at DESC`,
-      [sid(req)]
-    );
-    res.json(r.rows);
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
+router.get('/admin/test-senas2',admin,async(req,res)=>{try{const r=await db().query(`SELECT s.*, CASE WHEN s.estadia_id IS NOT NULL THEN 'estadía' ELSE 'abono' END as origen FROM señas s WHERE s.sucursal_id = $1 ORDER BY s.created_at DESC`,[sid(req)]);res.json(r.rows);}catch(e){res.status(500).json({error:e.message});}});
 
-// ===== ESTADIAS =====
-router.get('/estadias', auth, async (req, res) => {
-  try {
-    const r = await db().query(
-      `SELECT e.*, 
-        s.id as seña_id, s.monto as seña_monto, s.estado as seña_estado
-       FROM estadias e
-       LEFT JOIN señas s ON s.estadia_id = e.id AND s.concepto = 'llave'
-       WHERE e.sucursal_id = $1
-       ORDER BY e.created_at DESC`,
-      [sid(req)]
-    );
-    res.json(r.rows);
-  } catch(e) { res.status(500).json({error: e.message}); }
-});
+router.get('/estadias',auth,async(req,res)=>{try{const r=await db().query(`SELECT e.*,s.id as seña_id,s.monto as seña_monto,s.estado as seña_estado FROM estadias e LEFT JOIN señas s ON s.estadia_id=e.id AND s.concepto='llave' WHERE e.sucursal_id=$1 ORDER BY e.created_at DESC`,[sid(req)]);res.json(r.rows);}catch(e){res.status(500).json({error:e.message});}});
 
-router.post('/estadias', auth, async (req, res) => {
-  try {
-    const d = req.body;
-    const r = await db().query(
-      'INSERT INTO estadias (sucursal_id,cliente_nombre,patente,vehiculo_tipo,fecha_entrada,fecha_salida,dias,importe,forma_pago,monto_efectivo,monto_transferencia,estado,obs) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *',
-      [sid(req), d.cliente_nombre, d.patente||'', d.vehiculo_tipo||'auto', d.fecha_entrada, d.fecha_salida||null, d.dias||0, d.importe||0, d.forma_pago||'efectivo', d.monto_efectivo||0, d.monto_transferencia||0, d.estado||'activo', d.obs||'']
-    );
-    const estadia = r.rows[0];
-
-    // Si viene seña de llave, crearla automáticamente vinculada a esta estadía
-    if (d.seña_llave && parseFloat(d.seña_llave) > 0) {
-      await db().query(
-        'INSERT INTO señas (sucursal_id,estadia_id,cliente_nombre,concepto,monto,fecha_entrega,estado,obs) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
-        [sid(req), estadia.id, d.cliente_nombre, 'llave', parseFloat(d.seña_llave), d.fecha_entrada, 'activa', 'Estadía — ' + (d.patente||'')]
-      );
-    }
-
-    res.json(estadia);
-  } catch(e) { res.status(500).json({error: e.message}); }
-});
+router.post('/estadias',auth,async(req,res)=>{try{const d=req.body;const r=await db().query('INSERT INTO estadias (sucursal_id,cliente_nombre,patente,vehiculo_tipo,fecha_entrada,fecha_salida,dias,importe,forma_pago,monto_efectivo,monto_transferencia,estado,obs) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *',[sid(req),d.cliente_nombre,d.patente||'',d.vehiculo_tipo||'auto',d.fecha_entrada,d.fecha_salida||null,d.dias||0,d.importe||0,d.forma_pago||'efectivo',d.monto_efectivo||0,d.monto_transferencia||0,d.estado||'activo',d.obs||'']);const estadia=r.rows[0];if(d.seña_llave&&parseFloat(d.seña_llave)>0){await db().query('INSERT INTO señas (sucursal_id,estadia_id,cliente_nombre,concepto,monto,fecha_entrega,estado,obs) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',[sid(req),estadia.id,d.cliente_nombre,'llave',parseFloat(d.seña_llave),d.fecha_entrada,'activa','Estadía — '+(d.patente||'')]);}res.json(estadia);}catch(e){res.status(500).json({error:e.message});}});
 
 router.put('/estadias/:id',auth,async(req,res)=>{try{const d=req.body;await db().query('UPDATE estadias SET fecha_salida=$1,dias=$2,importe=$3,forma_pago=$4,monto_efectivo=$5,monto_transferencia=$6,estado=$7,obs=$8 WHERE id=$9 AND sucursal_id=$10',[d.fecha_salida,d.dias,d.importe,d.forma_pago||'efectivo',d.monto_efectivo||0,d.monto_transferencia||0,d.estado||'activo',d.obs||'',req.params.id,sid(req)]);res.json({ok:true});}catch(e){res.status(500).json({error:e.message});}});
 
-// ===== TARIFAS ESTADIA =====
 router.get('/tarifas-estadia',auth,async(req,res)=>{try{const r=await db().query('SELECT * FROM tarifas_estadia WHERE sucursal_id=$1 ORDER BY dias,vehiculo_id',[sid(req)]);res.json(r.rows);}catch(e){res.status(500).json({error:e.message});}});
 
 router.put('/tarifas-estadia',admin,async(req,res)=>{try{for(const u of req.body.updates)await db().query('UPDATE tarifas_estadia SET precio=$1 WHERE id=$2 AND sucursal_id=$3',[u.precio,u.id,sid(req)]);res.json({ok:true});}catch(e){res.status(500).json({error:e.message});}});
 
-router.get('/admin/init-tarifas-estadia',admin,async(req,res)=>{try{
-  const DIAS=[{d:1,l:'1 día'},{d:2,l:'2 días'},{d:3,l:'3 días'},{d:4,l:'4 días'},{d:5,l:'5 días'},{d:6,l:'6 días'},{d:7,l:'Semana'},{d:14,l:'2ª Semana'}];
-  const VEHS=[{id:'auto',l:'Auto'},{id:'camioneta',l:'Camioneta'},{id:'trafic',l:'Trafic'},{id:'trafic_larga',l:'Trafic Larga'}];
-  const s=await db().query('SELECT DISTINCT sucursal_id FROM estadias');
-  const sucs=s.rows.map(r=>r.sucursal_id);
-  if(!sucs.length){const all=await db().query('SELECT id FROM sucursales');sucs.push(...all.rows.map(r=>r.id));}
-  let count=0;
-  for(const sid of sucs)for(const d of DIAS)for(const v of VEHS){
-    const ex=await db().query('SELECT id FROM tarifas_estadia WHERE sucursal_id=$1 AND dias=$2 AND vehiculo_id=$3',[sid,d.d,v.id]);
-    if(!ex.rows.length){await db().query('INSERT INTO tarifas_estadia (sucursal_id,dias,dias_label,vehiculo_id,vehiculo_label,precio) VALUES ($1,$2,$3,$4,$5,$6)',[sid,d.d,d.l,v.id,v.l,0]);count++;}
-  }
-  res.json({ok:true,insertados:count});
-}catch(e){res.status(500).json({error:e.message});}});
+router.get('/admin/init-tarifas-estadia',admin,async(req,res)=>{try{const DIAS=[{d:1,l:'1 día'},{d:2,l:'2 días'},{d:3,l:'3 días'},{d:4,l:'4 días'},{d:5,l:'5 días'},{d:6,l:'6 días'},{d:7,l:'Semana'},{d:14,l:'2ª Semana'}];const VEHS=[{id:'auto',l:'Auto'},{id:'camioneta',l:'Camioneta'},{id:'trafic',l:'Trafic'},{id:'trafic_larga',l:'Trafic Larga'}];const s=await db().query('SELECT DISTINCT sucursal_id FROM estadias');const sucs=s.rows.map(r=>r.sucursal_id);if(!sucs.length){const all=await db().query('SELECT id FROM sucursales');sucs.push(...all.rows.map(r=>r.id));}let count=0;for(const sid of sucs)for(const d of DIAS)for(const v of VEHS){const ex=await db().query('SELECT id FROM tarifas_estadia WHERE sucursal_id=$1 AND dias=$2 AND vehiculo_id=$3',[sid,d.d,v.id]);if(!ex.rows.length){await db().query('INSERT INTO tarifas_estadia (sucursal_id,dias,dias_label,vehiculo_id,vehiculo_label,precio) VALUES ($1,$2,$3,$4,$5,$6)',[sid,d.d,d.l,v.id,v.l,0]);count++;}}res.json({ok:true,insertados:count});}catch(e){res.status(500).json({error:e.message});}});
 
-
-// ===== SEÑAS =====
-router.get('/senas', auth, async (req, res) => {
-  try {
-    const r = await db().query(
-      `SELECT s.*, 
-        CASE WHEN s.estadia_id IS NOT NULL THEN 'estadía' ELSE 'abono' END as origen
-       FROM señas s
-       WHERE s.sucursal_id = $1
-       ORDER BY s.created_at DESC`,
-      [sid(req)]
-    );
-    res.json(r.rows);
-  } catch(e) { res.status(500).json({error: e.message}); }
-});
+router.get('/senas',auth,async(req,res)=>{try{const r=await db().query(`SELECT s.*,CASE WHEN s.estadia_id IS NOT NULL THEN 'estadía' ELSE 'abono' END as origen FROM señas s WHERE s.sucursal_id=$1 ORDER BY s.created_at DESC`,[sid(req)]);res.json(r.rows);}catch(e){res.status(500).json({error:e.message});}});
 
 router.post('/senas',auth,async(req,res)=>{try{const d=req.body;const r=await db().query('INSERT INTO señas (sucursal_id,cliente_id,cliente_nombre,concepto,monto,fecha_entrega,estado,obs) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *',[sid(req),d.cliente_id||null,d.cliente_nombre||'',d.concepto||'llave',d.monto||0,d.fecha_entrega,d.estado||'activa',d.obs||'']);res.json(r.rows[0]);}catch(e){res.status(500).json({error:e.message});}});
 
 router.put('/senas/:id',auth,async(req,res)=>{try{const d=req.body;await db().query('UPDATE señas SET estado=$1,fecha_devolucion=$2,obs=$3 WHERE id=$4 AND sucursal_id=$5',[d.estado||'activa',d.fecha_devolucion||null,d.obs||'',req.params.id,sid(req)]);res.json({ok:true});}catch(e){res.status(500).json({error:e.message});}});
 
-router.get('/admin/init-tarifas-estadia2',admin,async(req,res)=>{
-  try{
-    const DIAS=[{d:1,l:'1 día'},{d:2,l:'2 días'},{d:3,l:'3 días'},{d:4,l:'4 días'},{d:5,l:'5 días'},{d:6,l:'6 días'},{d:7,l:'Semana'},{d:14,l:'2ª Semana'}];
-    const VEHS=[{id:'auto',l:'Auto'},{id:'camioneta',l:'Camioneta'},{id:'trafic',l:'Trafic'},{id:'trafic_larga',l:'Trafic Larga'}];
-    const sucs=await db().query('SELECT id FROM sucursales');
-    let count=0;
-    for(const row of sucs.rows){
-      const s=row.id;
-      for(const d of DIAS){
-        for(const v of VEHS){
-          const ex=await db().query('SELECT id FROM tarifas_estadia WHERE sucursal_id=$1 AND dias=$2 AND vehiculo_id=$3',[s,d.d,v.id]);
-          if(!ex.rows.length){
-            await db().query('INSERT INTO tarifas_estadia (sucursal_id,dias,dias_label,vehiculo_id,vehiculo_label,precio) VALUES ($1,$2,$3,$4,$5,$6)',[s,d.d,d.l,v.id,v.l,0]);
-            count++;
-          }
-        }
-      }
-    }
-    res.json({ok:true,insertados:count});
-  }catch(e){res.status(500).json({error:e.message});}
-});
+router.get('/admin/init-tarifas-estadia2',admin,async(req,res)=>{try{const DIAS=[{d:1,l:'1 día'},{d:2,l:'2 días'},{d:3,l:'3 días'},{d:4,l:'4 días'},{d:5,l:'5 días'},{d:6,l:'6 días'},{d:7,l:'Semana'},{d:14,l:'2ª Semana'}];const VEHS=[{id:'auto',l:'Auto'},{id:'camioneta',l:'Camioneta'},{id:'trafic',l:'Trafic'},{id:'trafic_larga',l:'Trafic Larga'}];const sucs=await db().query('SELECT id FROM sucursales');let count=0;for(const row of sucs.rows){const s=row.id;for(const d of DIAS){for(const v of VEHS){const ex=await db().query('SELECT id FROM tarifas_estadia WHERE sucursal_id=$1 AND dias=$2 AND vehiculo_id=$3',[s,d.d,v.id]);if(!ex.rows.length){await db().query('INSERT INTO tarifas_estadia (sucursal_id,dias,dias_label,vehiculo_id,vehiculo_label,precio) VALUES ($1,$2,$3,$4,$5,$6)',[s,d.d,d.l,v.id,v.l,0]);count++;}}}}res.json({ok:true,insertados:count});}catch(e){res.status(500).json({error:e.message});}});
 
-router.get('/admin/crear-tabla-pasada', admin, async (req, res) => {
-  try {
-    await db().query(`CREATE TABLE IF NOT EXISTS pasada_control (
-      id SERIAL PRIMARY KEY,
-      sucursal_id INTEGER,
-      cliente_id INTEGER,
-      fecha DATE DEFAULT CURRENT_DATE,
-      presente BOOLEAN DEFAULT false,
-      created_at TIMESTAMP DEFAULT NOW()
-    )`);
-    res.json({ ok: true, msg: 'Tabla creada' });
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
+router.get('/admin/crear-tabla-pasada',admin,async(req,res)=>{try{await db().query(`CREATE TABLE IF NOT EXISTS pasada_control (id SERIAL PRIMARY KEY,sucursal_id INTEGER,cliente_id INTEGER,fecha DATE DEFAULT CURRENT_DATE,presente BOOLEAN DEFAULT false,created_at TIMESTAMP DEFAULT NOW())`);res.json({ok:true,msg:'Tabla creada'});}catch(e){res.status(500).json({error:e.message});}});
 
-router.get('/control', auth, async (req, res) => {
-  try {
-    const s = sid(req);
-    const r = await db().query(
-      `SELECT c.id, c.nombre, c.vehiculo1_patente, c.vehiculo2_patente, c.modalidad,
-        COALESCE(p.presente, false) as presente
-       FROM clientes c
-       LEFT JOIN pasada_control p ON p.cliente_id = c.id AND p.sucursal_id = $1
-       WHERE c.sucursal_id = $1 AND c.activo = 1
-       ORDER BY c.nombre`,
-      [s]
-    );
-    res.json(r.rows);
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
+router.get('/control',auth,async(req,res)=>{try{const s=sid(req);const r=await db().query(`SELECT c.id,c.nombre,c.vehiculo1_patente,c.vehiculo2_patente,c.modalidad,COALESCE(p.presente,false) as presente FROM clientes c LEFT JOIN pasada_control p ON p.cliente_id=c.id AND p.sucursal_id=$1 WHERE c.sucursal_id=$1 AND c.activo=1 ORDER BY c.nombre`,[s]);res.json(r.rows);}catch(e){res.status(500).json({error:e.message});}});
 
-router.post('/control/:id', auth, async (req, res) => {
-  try {
-    const s = sid(req);
-    const existe = await db().query('SELECT id FROM pasada_control WHERE cliente_id=$1 AND sucursal_id=$2', [req.params.id, s]);
-    if (existe.rows.length) {
-      await db().query('UPDATE pasada_control SET presente=$1 WHERE cliente_id=$2 AND sucursal_id=$3', [req.body.presente, req.params.id, s]);
-    } else {
-      await db().query('INSERT INTO pasada_control (sucursal_id, cliente_id, presente) VALUES ($1,$2,$3)', [s, req.params.id, req.body.presente]);
-    }
-    res.json({ ok: true });
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
+router.post('/control/:id',auth,async(req,res)=>{try{const s=sid(req);const existe=await db().query('SELECT id FROM pasada_control WHERE cliente_id=$1 AND sucursal_id=$2',[req.params.id,s]);if(existe.rows.length){await db().query('UPDATE pasada_control SET presente=$1 WHERE cliente_id=$2 AND sucursal_id=$3',[req.body.presente,req.params.id,s]);}else{await db().query('INSERT INTO pasada_control (sucursal_id,cliente_id,presente) VALUES ($1,$2,$3)',[s,req.params.id,req.body.presente]);}res.json({ok:true});}catch(e){res.status(500).json({error:e.message});}});
 
-router.post('/control/limpiar', auth, async (req, res) => {
-  try {
-    await db().query('UPDATE pasada_control SET presente=false WHERE sucursal_id=$1', [sid(req)]);
-    res.json({ ok: true });
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
+router.post('/control/limpiar',auth,async(req,res)=>{try{await db().query('UPDATE pasada_control SET presente=false WHERE sucursal_id=$1',[sid(req)]);res.json({ok:true});}catch(e){res.status(500).json({error:e.message});}});
 
-router.get('/admin/crear-tabla-horarios', admin, async (req, res) => {
-  try {
-    await db().query(`CREATE TABLE IF NOT EXISTS modalidades_horario (
-      id SERIAL PRIMARY KEY,
-      sucursal_id INTEGER,
-      modalidad_id VARCHAR(50),
-      modalidad_nombre VARCHAR(100),
-      hora_desde INTEGER,
-      hora_hasta INTEGER,
-      cuenta_cupo BOOLEAN DEFAULT true,
-      created_at TIMESTAMP DEFAULT NOW()
-    )`);
-    res.json({ ok: true, msg: 'Tabla creada' });
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
+router.get('/admin/crear-tabla-horarios',admin,async(req,res)=>{try{await db().query(`CREATE TABLE IF NOT EXISTS modalidades_horario (id SERIAL PRIMARY KEY,sucursal_id INTEGER,modalidad_id VARCHAR(50),modalidad_nombre VARCHAR(100),hora_desde INTEGER,hora_hasta INTEGER,cuenta_cupo BOOLEAN DEFAULT true,created_at TIMESTAMP DEFAULT NOW())`);res.json({ok:true,msg:'Tabla creada'});}catch(e){res.status(500).json({error:e.message});}});
 
-router.get('/admin/init-horarios', admin, async (req, res) => {
-  try {
-    const sucs = await db().query('SELECT id FROM sucursales');
-    const HORARIOS = [
-      { mod: 'mensual24', nom: 'Mensual 24 hs', desde: 0, hasta: 24 },
-      { mod: 'turno1', nom: 'Turno 1', desde: 7, hasta: 14 },
-      { mod: 'turno2', nom: 'Turno 2', desde: 14, hasta: 22 },
-      { mod: 'comercial', nom: 'Comercial', desde: 7, hasta: 22 },
-      { mod: 'parcial', nom: 'Parcial', desde: 14, hasta: 32 },
-      { mod: 'nocturno', nom: 'Nocturno', desde: 20, hasta: 32 }
-    ];
-    let count = 0;
-    for (const row of sucs.rows) {
-      for (const h of HORARIOS) {
-        const ex = await db().query('SELECT id FROM modalidades_horario WHERE sucursal_id=$1 AND modalidad_id=$2', [row.id, h.mod]);
-        if (!ex.rows.length) {
-          await db().query('INSERT INTO modalidades_horario (sucursal_id,modalidad_id,modalidad_nombre,hora_desde,hora_hasta,cuenta_cupo) VALUES ($1,$2,$3,$4,$5,$6)', [row.id, h.mod, h.nom, h.desde, h.hasta, true]);
-          count++;
-        }
-      }
-    }
-    res.json({ ok: true, insertados: count });
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
+router.get('/admin/init-horarios',admin,async(req,res)=>{try{const sucs=await db().query('SELECT id FROM sucursales');const HORARIOS=[{mod:'mensual24',nom:'Mensual 24 hs',desde:0,hasta:24},{mod:'turno1',nom:'Turno 1',desde:7,hasta:14},{mod:'turno2',nom:'Turno 2',desde:14,hasta:22},{mod:'comercial',nom:'Comercial',desde:7,hasta:22},{mod:'parcial',nom:'Parcial',desde:14,hasta:32},{mod:'nocturno',nom:'Nocturno',desde:20,hasta:32}];let count=0;for(const row of sucs.rows){for(const h of HORARIOS){const ex=await db().query('SELECT id FROM modalidades_horario WHERE sucursal_id=$1 AND modalidad_id=$2',[row.id,h.mod]);if(!ex.rows.length){await db().query('INSERT INTO modalidades_horario (sucursal_id,modalidad_id,modalidad_nombre,hora_desde,hora_hasta,cuenta_cupo) VALUES ($1,$2,$3,$4,$5,$6)',[row.id,h.mod,h.nom,h.desde,h.hasta,true]);count++;}}}res.json({ok:true,insertados:count});}catch(e){res.status(500).json({error:e.message});}});
 
-router.get('/horarios', auth, async (req, res) => {
-  try {
-    const r = await db().query('SELECT * FROM modalidades_horario WHERE sucursal_id=$1 ORDER BY hora_desde', [sid(req)]);
-    res.json(r.rows);
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
+router.get('/horarios',auth,async(req,res)=>{try{const r=await db().query('SELECT * FROM modalidades_horario WHERE sucursal_id=$1 ORDER BY hora_desde',[sid(req)]);res.json(r.rows);}catch(e){res.status(500).json({error:e.message});}});
 
-router.put('/horarios/:id', admin, async (req, res) => {
-  try {
-    const d = req.body;
-    await db().query('UPDATE modalidades_horario SET hora_desde=$1, hora_hasta=$2, cuenta_cupo=$3 WHERE id=$4 AND sucursal_id=$5', [d.hora_desde, d.hora_hasta, d.cuenta_cupo, req.params.id, sid(req)]);
-    res.json({ ok: true });
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
+router.put('/horarios/:id',admin,async(req,res)=>{try{const d=req.body;await db().query('UPDATE modalidades_horario SET hora_desde=$1,hora_hasta=$2,cuenta_cupo=$3 WHERE id=$4 AND sucursal_id=$5',[d.hora_desde,d.hora_hasta,d.cuenta_cupo,req.params.id,sid(req)]);res.json({ok:true});}catch(e){res.status(500).json({error:e.message});}});
 
 module.exports=router;
-
-
