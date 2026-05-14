@@ -681,7 +681,8 @@ async function renderPrec(){try{
 const totalTr=PREC.reduce((s,p)=>s+(parseFloat(p.monto_transferencia)||0),0);
 const totalGen=PREC.reduce((s,p)=>s+(parseFloat(p.importe_abonado)||0),0);
 const pt=$('prec-total');
-if(pt)pt.innerHTML=PREC.length?`${PREC.length} pagos · Efectivo: ${pesos(totalEf)} · Transfer: ${pesos(totalTr)} · <strong>Total: ${pesos(totalGen)}</strong>`:'';tbody.innerHTML='';if(!PREC.length){tbody.innerHTML='<tr><td colspan="7"><div class="empty">Sin pagos aún</div></td></tr>';return;}PREC.forEach(p=>{const[a,m]=p.mes.split('-');const tr=document.createElement('tr');const formaBadge=p.forma_pago==='mixto'?'b-pu':p.forma_pago==='transferencia'?'b-bl':'b-gy';const ab=SES?.rol==='admin'?`<td><button class="btn btn-sm" onclick="abrirEditPago(${p.id})">Editar</button></td>`:'';tr.innerHTML=`<td>${p.cliente_nombre||'—'}</td><td>${MESES[parseInt(m)-1]} ${a}</td><td style="color:var(--text3)">${p.fecha}</td><td style="color:var(--gr);font-weight:600">${pesos(p.importe_abonado)}</td><td><span class="badge ${formaBadge}">${p.forma_pago}</span></td><td style="color:var(--text3)">${p.encargado_nombre||'—'}</td>${ab}`;tbody.appendChild(tr);});}catch(e){}}
+if(pt)pt.innerHTML=PREC.length?`${PREC.length} pagos · Efectivo: ${pesos(totalEf)} · Transfer: ${pesos(totalTr)} · <strong>Total: ${pesos(totalGen)}</strong> <button class="btn btn-sm" onclick="imprimirCaja()" style="margin-left:8px"><i data-lucide="printer"></i> Imprimir</button>`:'';
+lucide.createIcons();tbody.innerHTML='';if(!PREC.length){tbody.innerHTML='<tr><td colspan="7"><div class="empty">Sin pagos aún</div></td></tr>';return;}PREC.forEach(p=>{const[a,m]=p.mes.split('-');const tr=document.createElement('tr');const formaBadge=p.forma_pago==='mixto'?'b-pu':p.forma_pago==='transferencia'?'b-bl':'b-gy';const ab=SES?.rol==='admin'?`<td><button class="btn btn-sm" onclick="abrirEditPago(${p.id})">Editar</button></td>`:'';tr.innerHTML=`<td>${p.cliente_nombre||'—'}</td><td>${MESES[parseInt(m)-1]} ${a}</td><td style="color:var(--text3)">${p.fecha}</td><td style="color:var(--gr);font-weight:600">${pesos(p.importe_abonado)}</td><td><span class="badge ${formaBadge}">${p.forma_pago}</span></td><td style="color:var(--text3)">${p.encargado_nombre||'—'}</td>${ab}`;tbody.appendChild(tr);});}catch(e){}}
 
 function abrirEditPago(id){const p=PREC.find(x=>x.id===id);if(!p)return;$('ep-id').value=id;$('ep-fecha').value=p.fecha;$('ep-mes').value=p.mes;$('ep-esp').value=p.importe_esperado;$('ep-abo').value=p.importe_abonado;$('ep-efectivo').value=p.monto_efectivo||0;$('ep-transferencia').value=p.monto_transferencia||0;$('ep-forma').value=p.forma_pago;$('ep-obs').value=p.obs||'';$('ep-motivo').value='';openMo('mo-pago-edit');}
 async function guardarPagoEdit(){const motivo=$('ep-motivo').value.trim();if(!motivo){alert('Ingresá el motivo');return;}try{await api('PUT',`/api/pagos/${$('ep-id').value}`,{fecha:$('ep-fecha').value,mes:$('ep-mes').value,importe_esperado:parseInt($('ep-esp').value),importe_abonado:parseInt($('ep-abo').value),monto_efectivo:parseFloat($('ep-efectivo').value)||0,monto_transferencia:parseFloat($('ep-transferencia').value)||0,forma_pago:$('ep-forma').value,obs:($('ep-obs').value+' [Corrección: '+motivo+']').trim()});closeMo('mo-pago-edit');await renderPrec();toast('Pago corregido');}catch(e){toast(e.message,false);}}
@@ -1145,6 +1146,48 @@ async function guardarHorarios(){
     renderHorarios();
   }catch(e){toast(e.message,false);}
 } 
+
+function imprimirCaja(){
+  const desde=$('prec-desde')?.value||'—';
+  const hasta=$('prec-hasta')?.value||'—';
+  const totalEf=PREC.reduce((s,p)=>s+(parseFloat(p.monto_efectivo)||0),0);
+  const totalTr=PREC.reduce((s,p)=>s+(parseFloat(p.monto_transferencia)||0),0);
+  const totalGen=PREC.reduce((s,p)=>s+(parseFloat(p.importe_abonado)||0),0);
+  const suc=SUCS.find(x=>x.id==SES.sucursal_id);
+  const filas=PREC.map(p=>{
+    const[a,m]=p.mes.split('-');
+    return `<tr><td>${p.cliente_nombre||'—'}</td><td>${MESES[parseInt(m)-1]} ${a}</td><td>${p.fecha}</td><td style="text-align:right">${pesos(p.importe_abonado)}</td><td>${p.forma_pago}</td><td>${p.encargado_nombre||'—'}</td></tr>`;
+  }).join('');
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Cierre de caja</title><style>
+    body{font-family:Arial,sans-serif;font-size:12px;padding:20px}
+    h2{font-size:16px;margin-bottom:4px}
+    p{color:#666;margin-bottom:16px;font-size:12px}
+    table{width:100%;border-collapse:collapse;margin-bottom:16px}
+    th{background:#f0f0f0;padding:6px 8px;text-align:left;border-bottom:2px solid #ccc;font-size:11px}
+    td{padding:5px 8px;border-bottom:1px solid #eee;font-size:11px}
+    .totales{background:#f9f9f9;border:1px solid #ccc;border-radius:6px;padding:12px 16px;margin-top:8px}
+    .totales div{display:flex;justify-content:space-between;margin-bottom:4px}
+    .totales .total-gen{font-size:15px;font-weight:700;border-top:1px solid #ccc;padding-top:8px;margin-top:8px}
+    @media print{button{display:none}}
+  </style></head><body>
+    <h2>Cierre de caja — ${suc?.nombre||''}</h2>
+    <p>Período: ${desde} al ${hasta} · ${PREC.length} pagos</p>
+    <table>
+      <thead><tr><th>Cliente</th><th>Mes</th><th>Fecha</th><th style="text-align:right">Abonado</th><th>Forma</th><th>Encargado</th></tr></thead>
+      <tbody>${filas}</tbody>
+    </table>
+    <div class="totales">
+      <div><span>Efectivo</span><span>${pesos(totalEf)}</span></div>
+      <div><span>Transferencia</span><span>${pesos(totalTr)}</span></div>
+      <div class="total-gen"><span>TOTAL</span><span>${pesos(totalGen)}</span></div>
+    </div>
+    <script>window.onload=()=>window.print();<\/script>
+  </body></html>`;
+  const w=window.open('','_blank');
+  w.document.write(html);
+  w.document.close();
+}
+  
 (async()=>{
   await loadSucs();
   try{const me=await api('GET','/api/auth/me');SES=me;await initApp();}catch(e){}
