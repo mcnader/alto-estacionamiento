@@ -748,19 +748,109 @@ function renderEncs(){const tbody=$('enc-tbody');tbody.innerHTML='';USUS.forEach
 function abrirEnc(id){eEnc=id||null;$('mo-enc-t').textContent=id?'Editar encargado':'Nuevo encargado';const u=id?USUS.find(x=>x.id===id):{};$('enc-id').value=id||'';$('enc-nombre').value=u.nombre||'';$('enc-user').value=u.usuario||'';$('enc-pass').value='';$('enc-turno').value=u.turno||'';$('enc-cupo').value=u.cupo||'';$('enc-rol').value=u.rol||'encargado';$('enc-activo').value=u.activo!==undefined?(u.activo?'1':'0'):'1';const uf=$('enc-user');uf.readOnly=!!id;uf.style.background=id?'var(--bg)':'';openMo('mo-enc');}
 async function guardarEnc(){const n=$('enc-nombre').value.trim();if(!n){alert('El nombre es obligatorio');return;}const d={nombre:n,turno:$('enc-turno').value,rol:$('enc-rol').value,activo:parseInt($('enc-activo').value),cupo:parseInt($('enc-cupo').value)||null};const p=$('enc-pass').value;if(p)d.password=p;if(!eEnc){d.usuario=$('enc-user').value.trim();d.password=p||'enc123';}try{if(eEnc)await api('PUT',`/api/usuarios/${eEnc}`,d);else await api('POST','/api/usuarios',d);USUS=await api('GET','/api/usuarios');poblarEnc();poblarTurnoEnc();closeMo('mo-enc');renderEncs();toast(eEnc?'Encargado actualizado':'Encargado creado');}catch(e){toast(e.message,false);}}
 
+// ============================================================
+// REEMPLAZAR en public/index.html la función renderTarifas()
+// Buscá: "function renderTarifas(){"
+// Y reemplazá todo hasta el cierre "}" por este bloque:
+// ============================================================
+
 function renderTarifas(){
   const mods=[...new Map(TARS.map(t=>[t.modalidad_id,{id:t.modalidad_id,n:t.modalidad_nombre,h:t.horario}])).values()];
   const tramosDisp=[...new Set(TARS.map(t=>t.tramo))].sort((a,b)=>a-b);
   const cont=$('tar-cont');cont.innerHTML='';
+
   mods.forEach(mod=>{
     const div=document.createElement('div');div.className='t-mod';
+
+    // Calcular base e incremento actuales por vehículo
+    const baseInc={};
+    VEHS.forEach(v=>{
+      const precios=tramosDisp.map(ti=>{
+        const t=TARS.find(x=>x.modalidad_id===mod.id&&x.vehiculo_id===v.id&&x.tramo===ti);
+        return t?t.precio:0;
+      });
+      const base=precios[0]||0;
+      const inc=precios.length>1?(precios[1]-precios[0]):0;
+      baseInc[v.id]={base,inc};
+    });
+
+    // Fila base Tramo 1
+    let ctrlRow=`<div style="display:grid;grid-template-columns:110px repeat(${VEHS.length},1fr);border:1px solid #c0cce8;border-radius:6px;overflow:hidden;margin-bottom:6px;background:#e8eefa">
+      <div style="padding:6px 8px;font-size:10px;font-weight:700;color:#1a4a7a;background:#d8e4f8;border-right:1px solid #c0cce8;display:flex;align-items:center">BASE T1</div>`;
+    VEHS.forEach(v=>{
+      ctrlRow+=`<div style="padding:4px;border-right:1px solid #c0cce8">
+        <div style="font-size:9px;color:#1a4a7a;margin-bottom:2px;text-align:center;font-weight:600">${v.l}</div>
+        <input type="number" id="base_${mod.id}_${v.id}" value="${baseInc[v.id].base}" step="1000" min="0"
+          style="width:100%;padding:4px 5px;border:1px solid #aac;border-radius:4px;font-size:11px;text-align:right;background:white"
+          oninput="recalcTarifas('${mod.id}','${v.id}')">
+      </div>`;
+    });
+    ctrlRow+='</div>';
+
+    // Fila incremento por tramo
+    let incRow=`<div style="display:grid;grid-template-columns:110px repeat(${VEHS.length},1fr);border:1px solid #e8c97a;border-radius:6px;overflow:hidden;margin-bottom:14px;background:#fef3db">
+      <div style="padding:6px 8px;font-size:10px;font-weight:700;color:#7a4f00;background:#fae8b0;border-right:1px solid #e8c97a;display:flex;align-items:center">+ X TRAMO</div>`;
+    VEHS.forEach(v=>{
+      incRow+=`<div style="padding:4px;border-right:1px solid #e8c97a">
+        <div style="font-size:9px;color:#7a4f00;margin-bottom:2px;text-align:center;font-weight:600">${v.l}</div>
+        <input type="number" id="inc_${mod.id}_${v.id}" value="${baseInc[v.id].inc}" step="500" min="0"
+          style="width:100%;padding:4px 5px;border:1px solid #e8c97a;border-radius:4px;font-size:11px;text-align:right;background:white"
+          oninput="recalcTarifas('${mod.id}','${v.id}')">
+      </div>`;
+    });
+    incRow+='</div>';
+
+    // Tabla de tramos editable
     let g=`<div class="t-grid"><div class="tgh" style="text-align:left">Tramo</div>${VEHS.map(v=>`<div class="tgh">${v.l}</div>`).join('')}`;
-    tramosDisp.forEach((ti,idx)=>{const last=idx===tramosDisp.length-1?'tg-last':'';const lbl=TRAMOS_LABELS[ti]||('Tramo '+(ti+1));g+=`<div class="tgl ${last}">${lbl}</div>`;VEHS.forEach(v=>{const t=TARS.find(x=>x.modalidad_id===mod.id&&x.vehiculo_id===v.id&&x.tramo===ti);g+=`<div class="tgc ${last}"><input type="number" value="${t?t.precio:0}" data-id="${t?t.id:''}" step="1000" min="0"></div>`;});});
+    tramosDisp.forEach((ti,idx)=>{
+      const last=idx===tramosDisp.length-1?'tg-last':'';
+      const lbl=TRAMOS_LABELS[ti]||('Tramo '+(ti+1));
+      g+=`<div class="tgl ${last}">${lbl}</div>`;
+      VEHS.forEach(v=>{
+        const t=TARS.find(x=>x.modalidad_id===mod.id&&x.vehiculo_id===v.id&&x.tramo===ti);
+        g+=`<div class="tgc ${last}"><input type="number"
+          id="tar_${mod.id}_${v.id}_${ti}"
+          value="${t?t.precio:0}"
+          data-id="${t?t.id:''}"
+          step="1000" min="0"></div>`;
+      });
+    });
     g+='</div>';
-    div.innerHTML=`<div class="t-hd"><div style="display:flex;align-items:center;gap:8px"><span class="badge b-bl">${mod.id}</span><strong>${mod.n}</strong></div><span style="font-size:11px;color:var(--text3)">${mod.h}</span></div><div style="padding:14px 16px">${g}</div>`;
+
+    div.innerHTML=`<div class="t-hd">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="badge b-bl">${mod.id}</span><strong>${mod.n}</strong>
+      </div>
+      <span style="font-size:11px;color:var(--text3)">${mod.h||''}</span>
+    </div>
+    <div style="padding:14px 16px">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:6px;font-weight:600">📐 Calculador — ingresá base del Tramo 1 e incremento por tramo:</div>
+      ${ctrlRow}${incRow}
+      <div style="font-size:11px;color:var(--text2);margin-bottom:8px;font-weight:600">✏️ Tabla — editá manualmente si necesitás ajustar algún valor:</div>
+      ${g}
+    </div>`;
     cont.appendChild(div);
   });
 }
+
+function recalcTarifas(modId, vehId){
+  const base=parseFloat(document.getElementById(`base_${modId}_${vehId}`)?.value)||0;
+  const inc=parseFloat(document.getElementById(`inc_${modId}_${vehId}`)?.value)||0;
+  const tramosDisp=[...new Set(TARS.map(t=>t.tramo))].sort((a,b)=>a-b);
+  tramosDisp.forEach((ti,idx)=>{
+    const input=document.getElementById(`tar_${modId}_${vehId}_${ti}`);
+    if(input)input.value=Math.round(base+inc*idx);
+  });
+}
+
+// ============================================================
+// TAMBIÉN reemplazar en guardarTarifas() la línea que lee los inputs:
+// BUSCAR:
+//   document.querySelectorAll('.tgc input').forEach(i=>{
+//     if(i.dataset.id)updates.push({id:parseInt(i.dataset.id),precio:parseInt(i.value)||0});
+//   });
+// YA FUNCIONA — los nuevos inputs de la tabla tienen data-id correctamente
+// ============================================================
 async function guardarTarifas(){const updates=[];document.querySelectorAll('.tgc input').forEach(i=>{if(i.dataset.id)updates.push({id:parseInt(i.dataset.id),precio:parseInt(i.value)||0});});try{await api('PUT','/api/tarifas',{updates});TARS=await api('GET','/api/tarifas');toast('Tarifas guardadas');renderTarifas();}catch(e){toast(e.message,false);}}
 
 async function renderSucs(){$('suc-tbody').innerHTML='';SUCS.forEach(s=>{const tr=document.createElement('tr');tr.innerHTML=`<td><strong>${s.nombre}</strong></td><td style="color:var(--text2)">${s.direccion||'—'}</td><td style="color:var(--text3)">admin_s${s.id}</td><td><button class="btn btn-sm" onclick="abrirSuc(${s.id})">Editar</button></td>`;$('suc-tbody').appendChild(tr);});}
