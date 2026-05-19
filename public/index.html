@@ -2,10 +2,14 @@
 @media print{
   body>*:not(#mo-comp){display:none!important}
   #mo-comp{display:block!important;position:static!important;background:none!important;padding:0!important}
-  .mbox{box-shadow:none!important;border:none!important;padding:0!important;max-width:100%!important}
-  .comp{border:none!important;border-radius:0!important;padding:4mm 2mm!important;max-width:100%!important;box-shadow:none!important}
+  .mbox{box-shadow:none!important;border:none!important;padding:0!important;max-width:100%!important;margin:0!important}
+  .comp{border:none!important;border-radius:0!important;padding:0 1mm!important;max-width:100%!important;box-shadow:none!important;font-size:8.5pt!important;width:100%!important}
+  .comp-logo{font-size:10pt!important;margin-bottom:4pt!important;padding-bottom:4pt!important}
+  .comp-row{font-size:8pt!important;margin-bottom:3pt!important}
+  .comp-total{font-size:10pt!important}
+  .comp-saldo{font-size:8pt!important}
   .no-print{display:none!important}
-  @page{size:var(--ticket-ancho,57mm) auto;margin:0}
+  @page{size:var(--ticket-ancho,57mm) auto;margin:2mm 0}
 }
 @media(max-width:768px){.sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.bkdrop.open{display:block}.main{margin-left:0;padding:14px;padding-top:60px}.hbg{display:block}.metrics{grid-template-columns:repeat(2,1fr)}.fg2,.fg3{grid-template-columns:1fr}.t-grid{grid-template-columns:80px repeat(5,1fr)}}</style></head><body>
 <div class="offline-bar" id="offline-bar">
