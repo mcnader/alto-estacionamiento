@@ -327,27 +327,29 @@ function mostrarComp(pago,cli,esp,abo){
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Ticket</title><style>
     @page{size:${ancho} auto;margin:2mm 1mm}
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:monospace;font-size:9pt;width:${ancho};max-width:${ancho}}
-    .logo{font-size:11pt;font-weight:700;border-bottom:1px dashed #000;padding-bottom:4pt;margin-bottom:6pt}
-    .sub{font-size:8pt;color:#555;margin-top:1pt}
-    .fila{display:flex;justify-content:space-between;margin-bottom:3pt;font-size:8.5pt;gap:4pt}
-    .fila span:first-child{color:#444;flex-shrink:0}
-    .fila span:last-child{text-align:right;font-weight:600}
+    body{font-family:monospace;font-size:8.5pt;width:100%}
+    .logo{font-size:10.5pt;font-weight:700;border-bottom:1px dashed #000;padding-bottom:4pt;margin-bottom:5pt}
+    .sub{font-size:7.5pt;color:#555;margin-top:1pt;font-weight:400}
+    .fila{margin-bottom:3.5pt}
+    .fila .lbl{font-size:7pt;color:#777;text-transform:uppercase;letter-spacing:.03em}
+    .fila .val{font-size:8.5pt;font-weight:600}
     .sep{border-top:1px dashed #000;margin:5pt 0}
-    .total{display:flex;justify-content:space-between;font-size:11pt;font-weight:700;margin-top:2pt}
-    .saldo{text-align:right;font-size:8pt;color:#666;margin-top:2pt}
-    .gracias{text-align:center;font-size:7.5pt;color:#888;margin-top:8pt}
+    .total-lbl{font-size:7.5pt;color:#555;text-transform:uppercase;margin-bottom:1pt}
+    .total-val{font-size:13pt;font-weight:700}
+    .saldo{font-size:7.5pt;color:#666;margin-top:2pt}
+    .gracias{text-align:center;font-size:7pt;color:#999;margin-top:8pt}
   </style></head><body>
     <div class="logo">MIS ESTACIONAMIENTOS<div class="sub">${suc?.nombre||''}</div></div>
-    <div class="fila"><span>Cliente</span><span>${cli.nombre}</span></div>
-    <div class="fila"><span>Patente</span><span>${cli.vehiculo1_patente||'—'}${cli.vehiculo2_patente?' / '+cli.vehiculo2_patente:''}</span></div>
-    <div class="fila"><span>Modalidad</span><span>${nomMod(cli.modalidad)}</span></div>
-    <div class="fila"><span>Mes abonado</span><span>${MESES_F[parseInt(m)-1]} ${a}</span></div>
-    <div class="fila"><span>Fecha de pago</span><span>${pago.fecha}</span></div>
-    <div class="fila"><span>Forma de pago</span><span>${detalle_forma}</span></div>
-    <div class="fila"><span>Encargado</span><span>${enc?.nombre||'—'}</span></div>
+    <div class="fila"><div class="lbl">Cliente</div><div class="val">${cli.nombre}</div></div>
+    <div class="fila"><div class="lbl">Patente</div><div class="val">${cli.vehiculo1_patente||'—'}${cli.vehiculo2_patente?' / '+cli.vehiculo2_patente:''}</div></div>
+    <div class="fila"><div class="lbl">Modalidad</div><div class="val">${nomMod(cli.modalidad)}</div></div>
+    <div class="fila"><div class="lbl">Mes abonado</div><div class="val">${MESES_F[parseInt(m)-1]} ${a}</div></div>
+    <div class="fila"><div class="lbl">Fecha de pago</div><div class="val">${pago.fecha}</div></div>
+    <div class="fila"><div class="lbl">Forma de pago</div><div class="val">${detalle_forma}</div></div>
+    <div class="fila"><div class="lbl">Encargado</div><div class="val">${enc?.nombre||'—'}</div></div>
     <div class="sep"></div>
-    <div class="total"><span>Total abonado</span><span>${pesos(abo)}</span></div>
+    <div class="total-lbl">Total abonado</div>
+    <div class="total-val">${pesos(abo)}</div>
     ${s<0?`<div class="saldo">Saldo pendiente: ${pesos(Math.abs(s))}</div>`:''}
     <div class="gracias">Gracias por su pago</div>
     <script>window.onload=()=>{window.print();setTimeout(()=>window.close(),1000);}<\/script>
