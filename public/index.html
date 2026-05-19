@@ -208,7 +208,7 @@
     </div>
     <div style="display:flex;gap:8px">
       <button class="btn" onclick="closeMo('mo-comp')">Cerrar</button>
-      <button class="btn btn-p" onclick="window.print()"><i data-lucide="printer"></i> Imprimir</button>
+      <button class="btn btn-p" onclick="imprimirTicket()"><i data-lucide="printer"></i> Imprimir</button>
     </div>
   </div>
 </div></div>
@@ -324,39 +324,66 @@ function mostrarComp(pago,cli,esp,abo){
   const suc=SUCS.find(x=>x.id==SES.sucursal_id);
   const detalle_forma=pago.forma_pago==='mixto'?`Efectivo: ${pesos(pago.monto_efectivo)} / Transfer: ${pesos(pago.monto_transferencia)}`:pago.forma_pago;
   const ancho=localStorage.getItem('ticket_ancho')||'57mm';
+
+  // Guardar datos para el botón imprimir del modal
+  window._ticketData = {pago,cli,esp,abo,enc,suc,detalle_forma,ancho,a,m,s};
+
+  // Mostrar preview en modal
+  $('comp-body').innerHTML=`
+    <div class="comp-logo">MIS ESTACIONAMIENTOS<br><span style="font-size:11px;font-weight:400;color:var(--text3)">${suc?.nombre||''}</span></div>
+    <div class="comp-row"><span>Cliente</span><span>${cli.nombre}</span></div>
+    <div class="comp-row"><span>Patente</span><span>${cli.vehiculo1_patente||'—'}${cli.vehiculo2_patente?' / '+cli.vehiculo2_patente:''}</span></div>
+    <div class="comp-row"><span>Modalidad</span><span>${nomMod(cli.modalidad)}</span></div>
+    <div class="comp-row"><span>Mes abonado</span><span>${MESES_F[parseInt(m)-1]} ${a}</span></div>
+    <div class="comp-row"><span>Fecha de pago</span><span>${pago.fecha}</span></div>
+    <div class="comp-row"><span>Forma de pago</span><span>${detalle_forma}</span></div>
+    <div class="comp-row"><span>Encargado</span><span>${enc?.nombre||'—'}</span></div>
+    <div class="comp-total"><span>Total abonado</span><span>${pesos(abo)}</span></div>
+    ${s<0?`<div class="comp-saldo">Saldo pendiente: ${pesos(Math.abs(s))}</div>`:''}
+    <div style="font-size:10px;color:var(--text3);margin-top:12px;text-align:center">Gracias por su pago</div>`;
+  openMo('mo-comp');
+}
+
+function imprimirTicket(){
+  const d=window._ticketData;
+  if(!d)return;
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Ticket</title><style>
-    @page{size:${ancho} auto;margin:2mm 1mm}
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:monospace;font-size:8.5pt;width:100%}
-    .logo{font-size:10.5pt;font-weight:700;border-bottom:1px dashed #000;padding-bottom:4pt;margin-bottom:5pt}
-    .sub{font-size:7.5pt;color:#555;margin-top:1pt;font-weight:400}
-    .fila{margin-bottom:3.5pt}
-    .fila .lbl{font-size:7pt;color:#777;text-transform:uppercase;letter-spacing:.03em}
-    .fila .val{font-size:8.5pt;font-weight:600}
+    body{font-family:monospace;font-size:9pt;padding:2mm}
+    .logo{font-size:11pt;font-weight:700;border-bottom:1px dashed #000;padding-bottom:4pt;margin-bottom:5pt}
+    .sub{font-size:8pt;color:#555;margin-top:1pt;font-weight:400}
+    .fila{margin-bottom:4pt}
+    .fila .lbl{font-size:7pt;color:#777;text-transform:uppercase}
+    .fila .val{font-size:9pt;font-weight:600}
     .sep{border-top:1px dashed #000;margin:5pt 0}
-    .total-lbl{font-size:7.5pt;color:#555;text-transform:uppercase;margin-bottom:1pt}
-    .total-val{font-size:13pt;font-weight:700}
-    .saldo{font-size:7.5pt;color:#666;margin-top:2pt}
+    .total-lbl{font-size:7.5pt;color:#555;text-transform:uppercase}
+    .total-val{font-size:14pt;font-weight:700}
+    .saldo{font-size:8pt;color:#666;margin-top:2pt}
     .gracias{text-align:center;font-size:7pt;color:#999;margin-top:8pt}
   </style></head><body>
-    <div class="logo">MIS ESTACIONAMIENTOS<div class="sub">${suc?.nombre||''}</div></div>
-    <div class="fila"><div class="lbl">Cliente</div><div class="val">${cli.nombre}</div></div>
-    <div class="fila"><div class="lbl">Patente</div><div class="val">${cli.vehiculo1_patente||'—'}${cli.vehiculo2_patente?' / '+cli.vehiculo2_patente:''}</div></div>
-    <div class="fila"><div class="lbl">Modalidad</div><div class="val">${nomMod(cli.modalidad)}</div></div>
-    <div class="fila"><div class="lbl">Mes abonado</div><div class="val">${MESES_F[parseInt(m)-1]} ${a}</div></div>
-    <div class="fila"><div class="lbl">Fecha de pago</div><div class="val">${pago.fecha}</div></div>
-    <div class="fila"><div class="lbl">Forma de pago</div><div class="val">${detalle_forma}</div></div>
-    <div class="fila"><div class="lbl">Encargado</div><div class="val">${enc?.nombre||'—'}</div></div>
+    <div class="logo">MIS ESTACIONAMIENTOS<div class="sub">${d.suc?.nombre||''}</div></div>
+    <div class="fila"><div class="lbl">Cliente</div><div class="val">${d.cli.nombre}</div></div>
+    <div class="fila"><div class="lbl">Patente</div><div class="val">${d.cli.vehiculo1_patente||'—'}${d.cli.vehiculo2_patente?' / '+d.cli.vehiculo2_patente:''}</div></div>
+    <div class="fila"><div class="lbl">Modalidad</div><div class="val">${nomMod(d.cli.modalidad)}</div></div>
+    <div class="fila"><div class="lbl">Mes abonado</div><div class="val">${MESES_F[parseInt(d.m)-1]} ${d.a}</div></div>
+    <div class="fila"><div class="lbl">Fecha de pago</div><div class="val">${d.pago.fecha}</div></div>
+    <div class="fila"><div class="lbl">Forma de pago</div><div class="val">${d.detalle_forma}</div></div>
+    <div class="fila"><div class="lbl">Encargado</div><div class="val">${d.enc?.nombre||'—'}</div></div>
     <div class="sep"></div>
     <div class="total-lbl">Total abonado</div>
-    <div class="total-val">${pesos(abo)}</div>
-    ${s<0?`<div class="saldo">Saldo pendiente: ${pesos(Math.abs(s))}</div>`:''}
+    <div class="total-val">${pesos(d.abo)}</div>
+    ${d.s<0?`<div class="saldo">Saldo pendiente: ${pesos(Math.abs(d.s))}</div>`:''}
     <div class="gracias">Gracias por su pago</div>
-    <script>window.onload=()=>{window.print();setTimeout(()=>window.close(),1000);}<\/script>
   </body></html>`;
-  const w=window.open('','_blank','width=220,height=600,left=0,top=0');
-  w.document.write(html);
-  w.document.close();
+
+  // Usar iframe oculto para imprimir
+  let iframe=document.getElementById('print-iframe');
+  if(!iframe){iframe=document.createElement('iframe');iframe.id='print-iframe';iframe.style.cssText='position:fixed;top:-9999px;left:-9999px;width:220px;height:600px;border:none';document.body.appendChild(iframe);}
+  iframe.srcdoc=html;
+  iframe.onload=()=>{
+    closeMo('mo-comp');
+    setTimeout(()=>iframe.contentWindow.print(),300);
+  };
 }
 function limpiarPago(){$('pago-cli').value='';$('pago-obs').value='';$('pago-imp').value='';$('pago-efectivo').value='';$('pago-transferencia').value='';$('pago-fecha').value=hoy();$('pago-mes').value=mesA();$('calc-block').style.display='none';$('saldo-prev').style.display='none';$('pago-forma').value='efectivo';toggleMixto();}
 function limpiarFiltroPrec(){$('prec-desde').value='';$('prec-hasta').value='';renderPrec();}
