@@ -14,8 +14,12 @@ router.post('/login',async(req,res)=>{
         "SELECT * FROM usuarios WHERE usuario='admin_global' AND activo=1"
       );
       const user=rows[0];
-      if(!user||!bcrypt.compareSync(password,user.password))
-        return res.status(401).json({error:'Usuario o contraseña incorrectos'});
+      if(!user)return res.status(401).json({error:'Usuario o contraseña incorrectos'});
+      // Verificar con bcrypt o comparación directa si aún no tiene hash correcto
+      const ok=user.password.startsWith('$2')
+        ?bcrypt.compareSync(password,user.password)
+        :password===user.password;
+      if(!ok)return res.status(401).json({error:'Usuario o contraseña incorrectos'});
       req.session.user={id:user.id,nombre:user.nombre,rol:'admin_global',sucursal_id:null};
       return res.json({ok:true,user:req.session.user});
     }
