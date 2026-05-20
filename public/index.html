@@ -42,6 +42,32 @@
   </div>
 </div>
 
+<!-- DASHBOARD GLOBAL -->
+<div id="global-screen" style="display:none;min-height:100vh;background:var(--bg)">
+  <div style="background:var(--accent);padding:16px 24px;display:flex;justify-content:space-between;align-items:center">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="width:34px;height:34px;background:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center">
+        <svg width="22" height="22" viewBox="0 0 36 36" fill="none"><rect width="36" height="36" rx="8" fill="#1a1a18"/><text x="18" y="26" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="800" font-size="22" fill="white">P</text><circle cx="28" cy="10" r="5" fill="#4caf7d"/></svg>
+      </div>
+      <div>
+        <div style="color:#fff;font-weight:700;font-size:15px">MIS ESTACIONAMIENTOS</div>
+        <div style="color:rgba(255,255,255,.6);font-size:11px" id="global-mes"></div>
+      </div>
+    </div>
+    <button class="btn btn-sm" onclick="doLogout()" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2);color:#fff">
+      <i data-lucide="log-out"></i> Salir
+    </button>
+  </div>
+
+  <div style="padding:24px;max-width:1200px;margin:0 auto">
+    <!-- Totales generales -->
+    <div id="global-totales" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px"></div>
+    <!-- Cards por sucursal -->
+    <div style="font-size:18px;font-weight:700;margin-bottom:14px;color:var(--text)">Sucursales</div>
+    <div id="global-sucs" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px"></div>
+  </div>
+</div>
+
 <div id="app">
   <nav class="sidebar" id="sidebar">
     <div class="s-logo">
@@ -283,9 +309,108 @@ async function sincronizar(){if(!ONLINE||!COLA_OFFLINE.length)return;let ok=0;co
 function toast(m,ok=true){const t=$('toast');t.textContent=m;t.style.background=ok?'#1a1a18':'#c0392b';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);}
 async function api(method,url,body){const o={method,headers:{'Content-Type':'application/json'}};if(body)o.body=JSON.stringify(body);const r=await fetch(url,o);const text=await r.text();let d;try{d=JSON.parse(text);}catch(e){if(r.status===401){location.reload();return;}throw new Error('Error de servidor');}if(!r.ok)throw new Error(d.error||'Error');return d;}
 async function loadSucs(){SUCS=await api('GET','/api/sucursales');const s=$('login-suc');s.innerHTML='';SUCS.forEach(x=>{const o=document.createElement('option');o.value=x.id;o.textContent=x.nombre;s.appendChild(o);});}
-async function doLogin(){const suc=$('login-suc').value,user=$('login-user').value,pass=$('login-pass').value;$('login-err').style.display='none';try{const r=await api('POST','/api/auth/login',{sucursal_id:suc,usuario:user,password:pass});SES=r.user;await initApp();}catch(e){$('login-err').textContent=e.message;$('login-err').style.display='block';}}
+async function doLogin(){
+  const suc=$('login-suc').value,user=$('login-user').value,pass=$('login-pass').value;
+  $('login-err').style.display='none';
+  try{
+    const body=user==='admin_global'?{usuario:user,password:pass}:{sucursal_id:suc,usuario:user,password:pass};
+    const r=await api('POST','/api/auth/login',body);
+    SES=r.user;
+    if(SES.rol==='admin_global'){await initGlobal();}
+    else{await initApp();}
+  }catch(e){$('login-err').textContent=e.message;$('login-err').style.display='block';}
+}
+
+async function initGlobal(){
+  $('login-screen').style.display='none';
+  $('global-screen').style.display='block';
+  await renderGlobal();
+  lucide.createIcons();
+}
+
+async function renderGlobal(){
+  try{
+    const d=await api('GET','/api/global/resumen');
+    const MESES_F2=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const [ay,am]=d.mes.split('-');
+    $('global-mes').textContent=MESES_F2[parseInt(am)-1]+' '+ay;
+
+    // Totales
+    const t=d.totales;
+    $('global-totales').innerHTML=`
+      <div class="mc"><div class="mc-icon bl"><i data-lucide="users" style="width:16px;height:16px;color:#1a4a7a"></i></div><div class="mc-l">Clientes activos</div><div class="mc-v">${t.activos}</div></div>
+      <div class="mc"><div class="mc-icon gr"><i data-lucide="check-circle" style="width:16px;height:16px;color:#1a6b3c"></i></div><div class="mc-l">Pagaron este mes</div><div class="mc-v gr">${t.pagaron}</div></div>
+      <div class="mc"><div class="mc-icon rd"><i data-lucide="alert-circle" style="width:16px;height:16px;color:#8b2020"></i></div><div class="mc-l">Sin pagar</div><div class="mc-v rd">${t.sinPagar}</div></div>
+      <div class="mc"><div class="mc-icon am"><i data-lucide="trending-up" style="width:16px;height:16px;color:#7a4f00"></i></div>
+        <div class="mc-l">Recaudación total</div>
+        <div class="mc-v" style="font-size:18px">${pesos(t.recTotal)}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">
+          Efectivo: ${pesos(t.recEfectivo)} · Transfer: ${pesos(t.recTransferencia)}
+        </div>
+      </div>`;
+
+    // Cards por sucursal
+    $('global-sucs').innerHTML=d.sucursales.map(s=>{
+      const pct=s.cupo_total?Math.min(Math.round(s.ocupado_total/s.cupo_total*100),100):null;
+      const cupoColor=pct===null?'var(--bl)':pct>=100?'var(--rd)':pct>=80?'var(--am)':'var(--gr)';
+      const cupoText=pct===null?`${s.ocupado_total} activos`:`${s.ocupado_total} / ${s.cupo_total} (${pct}%)`;
+      return `<div class="card" style="cursor:pointer;transition:box-shadow .15s;border:1px solid var(--border)" 
+        onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.12)'" 
+        onmouseout="this.style.boxShadow=''">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+          <div>
+            <div style="font-size:16px;font-weight:700">${s.nombre}</div>
+            <div style="font-size:11px;color:var(--text3)">${s.direccion||''}</div>
+          </div>
+          <button class="btn btn-p btn-sm" onclick="entrarSucursal(${s.id})">
+            <i data-lucide="log-in"></i> Entrar
+          </button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+          <div style="background:var(--bg);border-radius:8px;padding:10px 12px">
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Activos</div>
+            <div style="font-size:20px;font-weight:700">${s.activos}</div>
+          </div>
+          <div style="background:var(--bg);border-radius:8px;padding:10px 12px">
+            <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Deudores</div>
+            <div style="font-size:20px;font-weight:700;color:${s.deudores>0?'var(--rd)':'var(--gr)'}">${s.deudores}</div>
+          </div>
+        </div>
+        <div style="background:#e8f5ee;border-radius:8px;padding:10px 12px;margin-bottom:8px">
+          <div style="font-size:10px;color:var(--gr);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Recaudación del mes</div>
+          <div style="font-size:18px;font-weight:800;color:var(--gr)">${pesos(s.recTotal)}</div>
+          <div style="font-size:11px;color:#555;margin-top:2px">Ef: ${pesos(s.recEfectivo)} · Tr: ${pesos(s.recTransferencia)}</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--text2)">
+          <span>Ocupación:</span>
+          <span style="font-weight:700;color:${cupoColor}">${cupoText}</span>
+        </div>
+        ${pct!==null?`<div style="height:5px;background:#f0f0f0;border-radius:99px;overflow:hidden;margin-top:6px">
+          <div style="height:100%;width:${pct}%;background:${cupoColor};border-radius:99px"></div>
+        </div>`:''}
+      </div>`;
+    }).join('');
+    lucide.createIcons();
+  }catch(e){console.error(e);}
+}
+
+async function entrarSucursal(sucursal_id){
+  try{
+    const r=await api('POST','/api/auth/login-sucursal',{sucursal_id});
+    SES=r.user;
+    $('global-screen').style.display='none';
+    await loadSucs();
+    await initApp();
+  }catch(e){toast(e.message,false);}
+}
 $('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
-async function doLogout(){await api('POST','/api/auth/logout');SES=null;$('app').style.display='none';$('login-screen').style.display='flex';}
+async function doLogout(){
+  await api('POST','/api/auth/logout');
+  SES=null;
+  $('app').style.display='none';
+  $('global-screen').style.display='none';
+  $('login-screen').style.display='flex';
+}
 async function initApp(){$('login-screen').style.display='none';$('app').style.display='flex';const s=SUCS.find(x=>x.id==SES.sucursal_id);$('s-suc').textContent=s?s.nombre:'';$('s-user').textContent=SES.nombre+' · '+(SES.turno||SES.rol);if(SES.rol==='admin')document.querySelectorAll('.admin-only').forEach(el=>el.style.display='');await loadData();renderDashboard();lucide.createIcons();if(COLA_OFFLINE.length)sincronizar();}
 async function loadData(){[CLIS,TARS,USUS]=await Promise.all([api('GET','/api/clientes'),api('GET','/api/tarifas'),api('GET','/api/usuarios')]);poblarMod('f-mod',true);poblarMod('cli-mod');poblarEnc();poblarTurnoEnc();}
 function poblarMod(sid,blank=false){const s=$(sid);if(!s)return;const v=s.value;s.innerHTML=blank?'<option value="">Todas las modalidades</option>':'';[...new Map(TARS.map(t=>[t.modalidad_id,{id:t.modalidad_id,n:t.modalidad_nombre}])).values()].forEach(m=>{const o=document.createElement('option');o.value=m.id;o.textContent=m.n;s.appendChild(o);});if(v)s.value=v;}
@@ -476,13 +601,17 @@ async function guardarHorarios(){const cambios={};document.querySelectorAll('#ho
 function imprimirCaja(){const desde=$('prec-desde')?.value||'—';const hasta=$('prec-hasta')?.value||'—';const totalEf=PREC.reduce((s,p)=>s+(parseFloat(p.monto_efectivo)||0),0);const totalTr=PREC.reduce((s,p)=>s+(parseFloat(p.monto_transferencia)||0),0);const totalGen=PREC.reduce((s,p)=>s+(parseFloat(p.importe_abonado)||0),0);const suc=SUCS.find(x=>x.id==SES.sucursal_id);const filas=PREC.map(p=>{const[a,m]=p.mes.split('-');return `<tr><td>${p.cliente_nombre||'—'}</td><td>${MESES[parseInt(m)-1]} ${a}</td><td>${p.fecha}</td><td style="text-align:right">${pesos(p.importe_abonado)}</td><td>${p.forma_pago}</td><td>${p.encargado_nombre||'—'}</td></tr>`;}).join('');const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Cierre de caja</title><style>body{font-family:Arial,sans-serif;font-size:12px;padding:20px}h2{font-size:16px;margin-bottom:4px}p{color:#666;margin-bottom:16px;font-size:12px}table{width:100%;border-collapse:collapse;margin-bottom:16px}th{background:#f0f0f0;padding:6px 8px;text-align:left;border-bottom:2px solid #ccc;font-size:11px}td{padding:5px 8px;border-bottom:1px solid #eee;font-size:11px}.totales{background:#f9f9f9;border:1px solid #ccc;border-radius:6px;padding:12px 16px;margin-top:8px}.totales div{display:flex;justify-content:space-between;margin-bottom:4px}.totales .total-gen{font-size:15px;font-weight:700;border-top:1px solid #ccc;padding-top:8px;margin-top:8px}@media print{button{display:none}}</style></head><body><h2>Cierre de caja — ${suc?.nombre||''}</h2><p>Período: ${desde} al ${hasta} · ${PREC.length} pagos</p><table><thead><tr><th>Cliente</th><th>Mes</th><th>Fecha</th><th style="text-align:right">Abonado</th><th>Forma</th><th>Encargado</th></tr></thead><tbody>${filas}</tbody></table><div class="totales"><div><span>Efectivo</span><span>${pesos(totalEf)}</span></div><div><span>Transferencia</span><span>${pesos(totalTr)}</span></div><div class="total-gen"><span>TOTAL</span><span>${pesos(totalGen)}</span></div></div><script>window.onload=()=>window.print();<\/script></body></html>`;const w=window.open('','_blank');w.document.write(html);w.document.close();}
 
 (async()=>{
-  // Restaurar ancho de ticket guardado
   const aw=localStorage.getItem('ticket_ancho')||'57mm';
   document.documentElement.style.setProperty('--ticket-ancho',aw);
   const sel=document.getElementById('ticket-ancho');
   if(sel)sel.value=aw;
   await loadSucs();
-  try{const me=await api('GET','/api/auth/me');SES=me;await initApp();}catch(e){}
+  try{
+    const me=await api('GET','/api/auth/me');
+    SES=me;
+    if(SES.rol==='admin_global'){await initGlobal();}
+    else{await initApp();}
+  }catch(e){}
 })();
 </script>
 
