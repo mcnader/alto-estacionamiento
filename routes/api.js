@@ -205,5 +205,28 @@ router.get('/global/resumen',async(req,res)=>{
   }catch(e){res.status(500).json({error:e.message});}
 });
 
+router.get('/global/resumen',async(req,res)=>{
+  try{
+    if(!req.session.user||req.session.user.rol!=='admin_global')
+      return res.status(403).json({error:'Solo admin global'});
+    const db2=getDb();
+    const mes=new Date().toISOString().slice(0,7);
+    const sucs=(await db2.query('SELECT * FROM sucursales ORDER BY nombre')).rows;
+    const data=await Promise.all(sucs.map(async s=>{
+      const sid=s.id;
+      const activos=parseInt((await db2.query('SELECT COUNT(*) as c FROM clientes WHERE sucursal_id=$1 AND activo=1',[sid])).rows[0].c)||0;
+      const pagaron=parseInt((await db2.query('SELECT COUNT(DISTINCT cliente_id) as c FROM pagos WHERE sucursal_id=$1 AND mes=$2 AND anulado=0',[sid,mes])).rows[0].c)||0;
+      const recRow=(await db2.query('SELECT COALESCE(SUM(importe_abonado),0) as total,COALESCE(SUM(monto_efectivo),0) as ef,COALESCE(SUM(monto_transferencia),0) as tr FROM pagos WHERE sucursal_id=$1 AND mes=$2 AND anulado=0',[sid,mes])).rows[0];
+      const deudores=parseInt((await db2.query(`SELECT COUNT(DISTINCT cliente_id) as c FROM (SELECT cliente_id FROM clientes WHERE sucursal_id=$1 AND activo=1 EXCEPT SELECT DISTINCT p.cliente_id FROM pagos p WHERE p.sucursal_id=$1 AND p.mes=$2 AND p.anulado=0 AND p.importe_abonado>=p.importe_esperado) x`,[sid,mes])).rows[0].c)||0;
+      const tots=(await db2.query('SELECT modalidad,COUNT(*) as c FROM clientes WHERE sucursal_id=$1 AND activo=1 GROUP BY modalidad',[sid])).rows;
+      const cnt={};tots.forEach(r=>{cnt[r.modalidad]=parseInt(r.c);});
+      const ocupado=Object.values(cnt).reduce((a,b)=>a+b,0);
+      return{id:sid,nombre:s.nombre,direccion:s.direccion||'',activos,pagaron,sinPagar:activos-pagaron,deudores,recTotal:parseFloat(recRow.total)||0,recEfectivo:parseFloat(recRow.ef)||0,recTransferencia:parseFloat(recRow.tr)||0,cupo_total:s.cupo_total||null,ocupado_total:ocupado};
+    }));
+    const totales=data.reduce((acc,s)=>({activos:acc.activos+s.activos,pagaron:acc.pagaron+s.pagaron,sinPagar:acc.sinPagar+s.sinPagar,deudores:acc.deudores+s.deudores,recTotal:acc.recTotal+s.recTotal,recEfectivo:acc.recEfectivo+s.recEfectivo,recTransferencia:acc.recTransferencia+s.recTransferencia}),{activos:0,pagaron:0,sinPagar:0,deudores:0,recTotal:0,recEfectivo:0,recTransferencia:0});
+    res.json({sucursales:data,totales,mes});
+  }catch(e){res.status(500).json({error:e.message});}
+});
+
 
 module.exports=router;
