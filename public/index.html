@@ -394,6 +394,44 @@ async function renderGlobal(){
         </div>`:''}
       </div>`;
     }).join('');
+
+    // Tabla de deudores por sucursal
+    const conDeudores=d.sucursales.filter(s=>s.deudores>0);
+    if(conDeudores.length){
+      const deudDiv=document.createElement('div');
+      deudDiv.style.cssText='margin-top:24px';
+      deudDiv.innerHTML=`
+        <div style="font-size:18px;font-weight:700;margin-bottom:14px;color:var(--text)">
+          Deudores este mes
+          <span class="badge b-rd" style="margin-left:8px;font-size:12px">${t.deudores} total</span>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <table style="width:100%;border-collapse:collapse">
+            <thead>
+              <tr style="background:var(--bg)">
+                <th style="text-align:left;padding:10px 16px;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;border-bottom:1px solid var(--border)">Sucursal</th>
+                <th style="text-align:center;padding:10px 16px;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;border-bottom:1px solid var(--border)">Sin pagar</th>
+                <th style="text-align:right;padding:10px 16px;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;border-bottom:1px solid var(--border)">Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${conDeudores.map(s=>`
+                <tr style="border-bottom:1px solid #f5f4f0">
+                  <td style="padding:12px 16px;font-weight:600">${s.nombre}</td>
+                  <td style="padding:12px 16px;text-align:center">
+                    <span class="badge b-rd" style="font-size:12px">${s.deudores} clientes</span>
+                  </td>
+                  <td style="padding:12px 16px;text-align:right">
+                    <button class="btn btn-sm btn-p" onclick="entrarSucursal(${s.id})">
+                      Ver deudores
+                    </button>
+                  </td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`;
+      $('global-sucs').parentElement.appendChild(deudDiv);
+    }
     lucide.createIcons();
   }catch(e){console.error(e);}
 }
