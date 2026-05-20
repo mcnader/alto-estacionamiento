@@ -217,7 +217,7 @@ router.get('/global/resumen',async(req,res)=>{
       const activos=parseInt((await db2.query('SELECT COUNT(*) as c FROM clientes WHERE sucursal_id=$1 AND activo=1',[sid])).rows[0].c)||0;
       const pagaron=parseInt((await db2.query('SELECT COUNT(DISTINCT cliente_id) as c FROM pagos WHERE sucursal_id=$1 AND mes=$2 AND anulado=0',[sid,mes])).rows[0].c)||0;
       const recRow=(await db2.query('SELECT COALESCE(SUM(importe_abonado),0) as total,COALESCE(SUM(monto_efectivo),0) as ef,COALESCE(SUM(monto_transferencia),0) as tr FROM pagos WHERE sucursal_id=$1 AND mes=$2 AND anulado=0',[sid,mes])).rows[0];
-      const deudores=parseInt((await db2.query(`SELECT COUNT(DISTINCT cliente_id) as c FROM (SELECT cliente_id FROM clientes WHERE sucursal_id=$1 AND activo=1 EXCEPT SELECT DISTINCT p.cliente_id FROM pagos p WHERE p.sucursal_id=$1 AND p.mes=$2 AND p.anulado=0 AND p.importe_abonado>=p.importe_esperado) x`,[sid,mes])).rows[0].c)||0;
+      const deudores=activos-pagaron;
       const tots=(await db2.query('SELECT modalidad,COUNT(*) as c FROM clientes WHERE sucursal_id=$1 AND activo=1 GROUP BY modalidad',[sid])).rows;
       const cnt={};tots.forEach(r=>{cnt[r.modalidad]=parseInt(r.c);});
       const ocupado=Object.values(cnt).reduce((a,b)=>a+b,0);
