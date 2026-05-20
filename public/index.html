@@ -32,8 +32,8 @@
       <div class="login-title">Mis Estacionamientos</div>
       <div class="login-sub">Sistema de gestión de estacionamiento</div>
     </div>
-    <div class="fg"><label>Sucursal</label><select id="login-suc"></select></div>
-    <div class="fg"><label>Usuario</label><input type="text" id="login-user" placeholder="usuario" autocomplete="username"></div>
+    <div class="fg" id="login-suc-fg"><label>Sucursal</label><select id="login-suc"></select></div>
+    <div class="fg"><label>Usuario</label><input type="text" id="login-user" placeholder="usuario" autocomplete="username" oninput="toggleSucursal()"></div>
     <div class="fg"><label>Contraseña</label><input type="password" id="login-pass" placeholder="contraseña" autocomplete="current-password"></div>
     <div id="login-err" style="display:none;color:#ff6b6b;font-size:12px;margin-bottom:10px;padding:8px 12px;background:rgba(255,0,0,.1);border-radius:6px"></div>
     <button class="btn btn-p" style="width:100%;justify-content:center;padding:10px" onclick="doLogin()">
@@ -309,6 +309,10 @@ async function sincronizar(){if(!ONLINE||!COLA_OFFLINE.length)return;let ok=0;co
 function toast(m,ok=true){const t=$('toast');t.textContent=m;t.style.background=ok?'#1a1a18':'#c0392b';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);}
 async function api(method,url,body){const o={method,headers:{'Content-Type':'application/json'}};if(body)o.body=JSON.stringify(body);const r=await fetch(url,o);const text=await r.text();let d;try{d=JSON.parse(text);}catch(e){if(r.status===401){location.reload();return;}throw new Error('Error de servidor');}if(!r.ok)throw new Error(d.error||'Error');return d;}
 async function loadSucs(){SUCS=await api('GET','/api/sucursales');const s=$('login-suc');s.innerHTML='';SUCS.forEach(x=>{const o=document.createElement('option');o.value=x.id;o.textContent=x.nombre;s.appendChild(o);});}
+function toggleSucursal(){
+  const u=$('login-user').value.trim();
+  $('login-suc-fg').style.display=u==='admin_global'?'none':'block';
+}
 async function doLogin(){
   const suc=$('login-suc').value,user=$('login-user').value,pass=$('login-pass').value;
   $('login-err').style.display='none';
