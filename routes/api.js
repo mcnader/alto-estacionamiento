@@ -132,4 +132,78 @@ router.get('/horarios',auth,async(req,res)=>{try{const r=await db().query('SELEC
 
 router.put('/horarios/:id',admin,async(req,res)=>{try{const d=req.body;await db().query('UPDATE modalidades_horario SET hora_desde=$1,hora_hasta=$2,cuenta_cupo=$3 WHERE id=$4 AND sucursal_id=$5',[d.hora_desde,d.hora_hasta,d.cuenta_cupo,req.params.id,sid(req)]);res.json({ok:true});}catch(e){res.status(500).json({error:e.message});}});
 
+// ── ENDPOINT GLOBAL ─────────────────────────────────────────────
+// Agregar esto al final de routes/api.js, ANTES de module.exports=router;
+
+router.get('/global/resumen',async(req,res)=>{
+  try{
+    if(!req.session.user||req.session.user.rol!=='admin_global')
+      return res.status(403).json({error:'Solo admin global'});
+    const db2=getDb();
+    const mes=new Date().toISOString().slice(0,7);
+    const sucs=(await db2.query('SELECT * FROM sucursales ORDER BY nombre')).rows;
+
+    const data=await Promise.all(sucs.map(async s=>{
+      const sid=s.id;
+
+      const activos=parseInt((await db2.query(
+        'SELECT COUNT(*) as c FROM clientes WHERE sucursal_id=$1 AND activo=1',[sid]
+      )).rows[0].c)||0;
+
+      const pagaron=parseInt((await db2.query(
+        'SELECT COUNT(DISTINCT cliente_id) as c FROM pagos WHERE sucursal_id=$1 AND mes=$2 AND anulado=0',[sid,mes]
+      )).rows[0].c)||0;
+
+      const recRow=(await db2.query(
+        'SELECT COALESCE(SUM(importe_abonado),0) as total, COALESCE(SUM(monto_efectivo),0) as ef, COALESCE(SUM(monto_transferencia),0) as tr FROM pagos WHERE sucursal_id=$1 AND mes=$2 AND anulado=0',[sid,mes]
+      )).rows[0];
+
+      const deudores=parseInt((await db2.query(
+        `SELECT COUNT(DISTINCT cliente_id) as c FROM (
+          SELECT cliente_id FROM clientes WHERE sucursal_id=$1 AND activo=1
+          EXCEPT
+          SELECT DISTINCT p.cliente_id FROM pagos p WHERE p.sucursal_id=$1 AND p.mes=$2 AND p.anulado=0 AND p.importe_abonado>=p.importe_esperado
+        ) x`,[sid,mes]
+      )).rows[0].c)||0;
+
+      // Cupos
+      const tots=(await db2.query(
+        'SELECT modalidad,COUNT(*) as c FROM clientes WHERE sucursal_id=$1 AND activo=1 GROUP BY modalidad',[sid]
+      )).rows;
+      const cnt={};tots.forEach(r=>{cnt[r.modalidad]=parseInt(r.c);});
+      const ocupado=(cnt['turno1']||0)+(cnt['turno2']||0)+(cnt['mensual24']||0)+
+        Object.entries(cnt).filter(([k])=>!['turno1','turno2','mensual24'].includes(k)).reduce((s,[,v])=>s+v,0);
+
+      return{
+        id:sid,
+        nombre:s.nombre,
+        direccion:s.direccion||'',
+        activos,
+        pagaron,
+        sinPagar:activos-pagaron,
+        deudores,
+        recTotal:parseFloat(recRow.total)||0,
+        recEfectivo:parseFloat(recRow.ef)||0,
+        recTransferencia:parseFloat(recRow.tr)||0,
+        cupo_total:s.cupo_total||null,
+        ocupado_total:ocupado,
+      };
+    }));
+
+    // Totales
+    const totales=data.reduce((acc,s)=>({
+      activos:acc.activos+s.activos,
+      pagaron:acc.pagaron+s.pagaron,
+      sinPagar:acc.sinPagar+s.sinPagar,
+      deudores:acc.deudores+s.deudores,
+      recTotal:acc.recTotal+s.recTotal,
+      recEfectivo:acc.recEfectivo+s.recEfectivo,
+      recTransferencia:acc.recTransferencia+s.recTransferencia,
+    }),{activos:0,pagaron:0,sinPagar:0,deudores:0,recTotal:0,recEfectivo:0,recTransferencia:0});
+
+    res.json({sucursales:data,totales,mes});
+  }catch(e){res.status(500).json({error:e.message});}
+});
+
+
 module.exports=router;
