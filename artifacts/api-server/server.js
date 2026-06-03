@@ -48,3 +48,4 @@ if (!PORT) throw new Error('PORT env var requerida');
 app.listen(PORT, () => {
   console.log(`Servidor escuchando en puerto ${PORT}`);
 });
+// v2
