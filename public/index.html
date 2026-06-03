@@ -544,6 +544,23 @@ function imprimirTicket(){
     setTimeout(()=>iframe.contentWindow.print(),300);
   };
 }
+                                                                                                                                        
+function aplicarSaldoFavor(saldoFavor,totalSinDescuento){
+  const chk=$('chk-saldo-favor');
+  const det=$('saldo-favor-detalle');
+  if(!chk)return;
+  if(chk.checked){
+    const nuevoTotal=Math.max(0,totalSinDescuento-saldoFavor);
+    $('pago-imp').value=nuevoTotal;
+    if(det){det.style.display='block';det.innerHTML=`Total: ${pesos(totalSinDescuento)} − Saldo a favor: ${pesos(Math.min(saldoFavor,totalSinDescuento))} = <strong>${pesos(nuevoTotal)}</strong>${nuevoTotal===0?'<span class="badge b-gr" style="margin-left:8px">¡Cubierto por saldo!</span>':''}`;}
+    // Si el pago es mixto actualizamos el efectivo
+    if($('pago-forma').value==='efectivo')$('pago-efectivo')&&($('pago-efectivo').value=nuevoTotal);
+  }else{
+    $('pago-imp').value=totalSinDescuento;
+    if(det)det.style.display='none';
+  }
+}
+                                                                                                                                        
 function limpiarPago(){$('pago-cli').value='';$('pago-obs').value='';$('pago-imp').value='';$('pago-efectivo').value='';$('pago-transferencia').value='';$('pago-fecha').value=hoy();$('pago-mes').value=mesA();$('calc-block').style.display='none';$('saldo-prev').style.display='none';$('pago-forma').value='efectivo';toggleMixto();}
 function limpiarFiltroPrec(){$('prec-desde').value='';$('prec-hasta').value='';renderPrec();}
 async function renderPrec(){try{const desde=$('prec-desde')?.value;const hasta=$('prec-hasta')?.value;let url='/api/pagos';if(desde&&hasta)url+=`?desde=${desde}&hasta=${hasta}`;const pagos=await api('GET',url);PREC=desde&&hasta?pagos:pagos.slice(0,15);const tbody=$('prec-tbody');const totalEf=PREC.reduce((s,p)=>s+(parseFloat(p.monto_efectivo)||0),0);const totalTr=PREC.reduce((s,p)=>s+(parseFloat(p.monto_transferencia)||0),0);const totalGen=PREC.reduce((s,p)=>s+(parseFloat(p.importe_abonado)||0),0);const pt=$('prec-total');if(pt)pt.innerHTML=PREC.length?`${PREC.length} pagos · Efectivo: ${pesos(totalEf)} · Transfer: ${pesos(totalTr)} · <strong>Total: ${pesos(totalGen)}</strong> <button class="btn btn-sm" onclick="imprimirCaja()" style="margin-left:8px"><i data-lucide="printer"></i> Imprimir</button>`:'';lucide.createIcons();tbody.innerHTML='';if(!PREC.length){tbody.innerHTML='<tr><td colspan="7"><div class="empty">Sin pagos aún</div></td></tr>';return;}PREC.forEach(p=>{const[a,m]=p.mes.split('-');const tr=document.createElement('tr');const formaBadge=p.forma_pago==='mixto'?'b-pu':p.forma_pago==='transferencia'?'b-bl':'b-gy';const ab=SES?.rol==='admin'?`<td><button class="btn btn-sm" onclick="abrirEditPago(${p.id})">Editar</button> <button class="btn btn-sm" onclick="reimprimirTicket(${p.id})" title="Reimprimir">🖨️</button></td>`:`<td><button class="btn btn-sm" onclick="reimprimirTicket(${p.id})" title="Reimprimir">🖨️</button></td>`;tr.innerHTML=`<td>${p.cliente_nombre||'—'}</td><td>${MESES[parseInt(m)-1]} ${a}</td><td style="color:var(--text3)">${p.fecha}</td><td style="color:var(--gr);font-weight:600">${pesos(p.importe_abonado)}</td><td><span class="badge ${formaBadge}">${p.forma_pago}</span></td><td style="color:var(--text3)">${p.encargado_nombre||'—'}</td>${ab}`;tbody.appendChild(tr);});}catch(e){}}
