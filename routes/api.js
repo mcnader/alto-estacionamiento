@@ -20,9 +20,67 @@ router.post('/usuarios',admin,async(req,res)=>{try{const {nombre,usuario,passwor
 
 router.put('/usuarios/:id',admin,async(req,res)=>{try{const u=(await db().query('SELECT * FROM usuarios WHERE id=$1 AND sucursal_id=$2',[req.params.id,sid(req)])).rows[0];if(!u)return res.status(404).json({error:'No encontrado'});await db().query('UPDATE usuarios SET nombre=$1,turno=$2,rol=$3,activo=$4,cupo=$5 WHERE id=$6',[req.body.nombre||u.nombre,req.body.turno??u.turno??'',req.body.rol||u.rol,req.body.activo!==undefined?req.body.activo:u.activo,req.body.cupo!==undefined?req.body.cupo||null:u.cupo,u.id]);if(req.body.password)await db().query('UPDATE usuarios SET password=$1 WHERE id=$2',[bcrypt.hashSync(req.body.password,10),u.id]);res.json({ok:true});}catch(e){res.status(500).json({error:e.message});}});
 
-router.get('/cupos',auth,async(req,res)=>{try{const s=sid(req);const suc=(await db().query('SELECT * FROM sucursales WHERE id=$1',[s])).rows[0];const tots=(await db().query('SELECT modalidad,COUNT(*) as c FROM clientes WHERE sucursal_id=$1 AND activo=1 GROUP BY modalidad',[s])).rows;const cnt={};tots.forEach(r=>{cnt[r.modalidad]=parseInt(r.c);});const turno1=cnt['turno1']||0;const turno2=cnt['turno2']||0;const mensual24=cnt['mensual24']||0;const otros=Object.entries(cnt).filter(([k])=>!['turno1','turno2','mensual24'].includes(k)).reduce((s,[,v])=>s+v,0);const estadiasActivas=parseInt((await db().query('SELECT COUNT(*) as c FROM estadias WHERE sucursal_id=$1 AND estado=$2',[s,'activo'])).rows[0].c)||0;const total=turno1+turno2+mensual24+otros+estadiasActivas;res.json({sucursal:suc,cupo_total:suc.cupo_total,cupo_turno1:suc.cupo_turno1,cupo_turno2:suc.cupo_turno2,cupo_mensual24:suc.cupo_mensual24,ocupado_turno1:turno1,ocupado_turno2:turno2,ocupado_mensual24:mensual24,ocupado_otros:otros,ocupado_total:total,estadias_activas:estadiasActivas});}catch(e){res.status(500).json({error:e.message});}});
+// ─── FUNCIÓN CENTRAL: calcula el pico de ocupación simultánea por franja horaria ───
+async function calcPicoOcupacion(sucursal_id){
+  const horarios=(await db().query('SELECT * FROM modalidades_horario WHERE sucursal_id=$1 AND cuenta_cupo=true',[sucursal_id])).rows;
+  const clientes=(await db().query("SELECT modalidad,vehiculo1_tipo,vehiculo2_tipo FROM clientes WHERE sucursal_id=$1 AND activo=1",[sucursal_id])).rows;
+  const franjas=new Array(33).fill(0);
+  for(const c of clientes){
+    const esMotos=(c.vehiculo1_tipo==='moto'&&(!c.vehiculo2_tipo||c.vehiculo2_tipo==='moto'||c.vehiculo2_tipo===''));
+    if(esMotos)continue;
+    const h=horarios.find(x=>x.modalidad_id===c.modalidad);
+    if(!h)continue;
+    for(let i=h.hora_desde;i<h.hora_hasta&&i<33;i++)franjas[i]++;
+  }
+  const pico=Math.max(...franjas);
+  const franjasPico=franjas.map((v,i)=>({hora:i,ocupacion:v})).filter(f=>f.ocupacion===pico&&pico>0);
+  return{pico,franjas,franjasPico};
+}
 
-router.put('/cupos',auth,async(req,res)=>{try{const{cupo_total,cupo_turno1,cupo_turno2,cupo_mensual24}=req.body;await db().query('UPDATE sucursales SET cupo_total=$1,cupo_turno1=$2,cupo_turno2=$3,cupo_mensual24=$4 WHERE id=$5',[cupo_total||null,cupo_turno1||null,cupo_turno2||null,cupo_mensual24||null,sid(req)]);res.json({ok:true});}catch(e){res.status(500).json({error:e.message});}});
+// ─── CUPOS ───
+router.get('/cupos',auth,async(req,res)=>{
+  try{
+    const s=sid(req);
+    const suc=(await db().query('SELECT * FROM sucursales WHERE id=$1',[s])).rows[0];
+    const tots=(await db().query('SELECT modalidad,COUNT(*) as c FROM clientes WHERE sucursal_id=$1 AND activo=1 GROUP BY modalidad',[s])).rows;
+    const cnt={};tots.forEach(r=>{cnt[r.modalidad]=parseInt(r.c);});
+    const total=Object.values(cnt).reduce((a,b)=>a+b,0);
+    const{pico,franjas,franjasPico}=await calcPicoOcupacion(s);
+    const cupo=suc.cupo_mensuales||null;
+    res.json({
+      sucursal:suc,
+      cupo_mensuales:cupo,
+      ocupado_total:total,
+      pico_simultaneo:pico,
+      franjas_pico:franjasPico,
+      franjas_completo:franjas,
+      detalle_modalidades:cnt,
+      libre:cupo!==null?cupo-pico:null
+    });
+  }catch(e){res.status(500).json({error:e.message});}
+});
+
+router.put('/cupos',auth,async(req,res)=>{
+  try{
+    await db().query('UPDATE sucursales SET cupo_mensuales=$1 WHERE id=$2',[req.body.cupo_mensuales||null,sid(req)]);
+    res.json({ok:true});
+  }catch(e){res.status(500).json({error:e.message});}
+});
+
+router.get('/cupos/preview',auth,async(req,res)=>{
+  try{
+    const s=sid(req);
+    const{pico,franjas,franjasPico}=await calcPicoOcupacion(s);
+    const suc=(await db().query('SELECT cupo_mensuales,lugares_fisicos FROM sucursales WHERE id=$1',[s])).rows[0];
+    res.json({
+      cupo_mensuales:suc.cupo_mensuales||null,
+      lugares_fisicos:suc.lugares_fisicos||null,
+      pico_actual:pico,
+      franjas_pico:franjasPico,
+      franjas_completo:franjas
+    });
+  }catch(e){res.status(500).json({error:e.message});}
+});
 
 router.get('/tarifas',auth,async(req,res)=>{try{const r=await db().query('SELECT * FROM tarifas WHERE sucursal_id=$1 ORDER BY modalidad_id,vehiculo_id,tramo',[sid(req)]);res.json(r.rows);}catch(e){res.status(500).json({error:e.message});}});
 
@@ -32,9 +90,58 @@ router.get('/clientes',auth,async(req,res)=>{try{const {activo}=req.query;let q=
 
 router.get('/clientes/:id',auth,async(req,res)=>{try{const r=await db().query('SELECT * FROM clientes WHERE id=$1 AND sucursal_id=$2',[req.params.id,sid(req)]);if(!r.rows[0])return res.status(404).json({error:'No encontrado'});res.json(r.rows[0]);}catch(e){res.status(500).json({error:e.message});}});
 
-router.post('/clientes',auth,async(req,res)=>{try{const d=req.body;if(!d.nombre||!d.modalidad)return res.status(400).json({error:'Nombre y modalidad requeridos'});
-if(d.turno_encargado_id){const enc=(await db().query('SELECT cupo FROM usuarios WHERE id=$1',[d.turno_encargado_id])).rows[0];if(enc?.cupo){const act=parseInt((await db().query('SELECT COUNT(*) as c FROM clientes WHERE turno_encargado_id=$1 AND activo=1',[d.turno_encargado_id])).rows[0].c);if(act>=enc.cupo)return res.status(409).json({error:'Cupo lleno para este turno'});}}
-const r=await db().query(`INSERT INTO clientes (sucursal_id,nombre,dni,cel,tel,tel_ref_parentesco,dom,trabajo,modalidad,turno_encargado_id,vehiculo1_tipo,vehiculo1_marca,vehiculo1_modelo,vehiculo1_color,vehiculo1_patente,vehiculo2_tipo,vehiculo2_marca,vehiculo2_modelo,vehiculo2_color,vehiculo2_patente,obs,ingreso,activo) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,1) RETURNING id`,[sid(req),d.nombre,d.dni||'',d.cel||'',d.tel||'',d.tel_ref_parentesco||'',d.dom||'',d.trabajo||'',d.modalidad,d.turno_encargado_id||null,d.vehiculo1_tipo||'auto',d.vehiculo1_marca||'',d.vehiculo1_modelo||'',d.vehiculo1_color||'',d.vehiculo1_patente||'',d.vehiculo2_tipo||'',d.vehiculo2_marca||'',d.vehiculo2_modelo||'',d.vehiculo2_color||'',d.vehiculo2_patente||'',d.obs||'',d.ingreso||'']);const nuevo=await db().query('SELECT * FROM clientes WHERE id=$1',[r.rows[0].id]);res.json(nuevo.rows[0]);}catch(e){res.status(500).json({error:e.message});}});
+router.post('/clientes',auth,async(req,res)=>{
+  try{
+    const d=req.body;
+    if(!d.nombre||!d.modalidad)return res.status(400).json({error:'Nombre y modalidad requeridos'});
+
+    // Validación cupo por encargado (existente)
+    if(d.turno_encargado_id){
+      const enc=(await db().query('SELECT cupo FROM usuarios WHERE id=$1',[d.turno_encargado_id])).rows[0];
+      if(enc?.cupo){
+        const act=parseInt((await db().query('SELECT COUNT(*) as c FROM clientes WHERE turno_encargado_id=$1 AND activo=1',[d.turno_encargado_id])).rows[0].c);
+        if(act>=enc.cupo)return res.status(409).json({error:'Cupo lleno para este turno'});
+      }
+    }
+
+    // Validación cupo pool único (nueva lógica)
+    // Solo si no viene el flag force:true (el front lo manda cuando el usuario confirma el aviso)
+    if(!d.force){
+      const suc=(await db().query('SELECT cupo_mensuales FROM sucursales WHERE id=$1',[sid(req)])).rows[0];
+      if(suc?.cupo_mensuales){
+        const hMod=(await db().query('SELECT * FROM modalidades_horario WHERE sucursal_id=$1 AND modalidad_id=$2 AND cuenta_cupo=true',[sid(req),d.modalidad])).rows[0];
+        if(hMod){
+          // Simular el pico con el nuevo cliente incluido
+          const horarios=(await db().query('SELECT * FROM modalidades_horario WHERE sucursal_id=$1 AND cuenta_cupo=true',[sid(req)])).rows;
+          const clientes=(await db().query("SELECT modalidad,vehiculo1_tipo FROM clientes WHERE sucursal_id=$1 AND activo=1",[sid(req)])).rows;
+          const franjas=new Array(33).fill(0);
+          for(const c of clientes){
+            if(c.vehiculo1_tipo==='moto')continue;
+            const hc=horarios.find(x=>x.modalidad_id===c.modalidad);
+            if(!hc)continue;
+            for(let i=hc.hora_desde;i<hc.hora_hasta&&i<33;i++)franjas[i]++;
+          }
+          // Sumar el nuevo cliente
+          for(let i=hMod.hora_desde;i<hMod.hora_hasta&&i<33;i++)franjas[i]++;
+          const picoNuevo=Math.max(...franjas);
+          if(picoNuevo>suc.cupo_mensuales){
+            const horaConflicto=franjas.indexOf(picoNuevo);
+            return res.status(409).json({
+              alerta:true,
+              mensaje:`Con este alta se supera el cupo en la franja ${horaConflicto}-${horaConflicto+1}hs (${picoNuevo}/${suc.cupo_mensuales}). ¿Querés continuar igual?`,
+              pico_nuevo:picoNuevo,
+              cupo:suc.cupo_mensuales
+            });
+          }
+        }
+      }
+    }
+
+    const r=await db().query(`INSERT INTO clientes (sucursal_id,nombre,dni,cel,tel,tel_ref_parentesco,dom,trabajo,modalidad,turno_encargado_id,vehiculo1_tipo,vehiculo1_marca,vehiculo1_modelo,vehiculo1_color,vehiculo1_patente,vehiculo2_tipo,vehiculo2_marca,vehiculo2_modelo,vehiculo2_color,vehiculo2_patente,obs,ingreso,activo) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,1) RETURNING id`,[sid(req),d.nombre,d.dni||'',d.cel||'',d.tel||'',d.tel_ref_parentesco||'',d.dom||'',d.trabajo||'',d.modalidad,d.turno_encargado_id||null,d.vehiculo1_tipo||'auto',d.vehiculo1_marca||'',d.vehiculo1_modelo||'',d.vehiculo1_color||'',d.vehiculo1_patente||'',d.vehiculo2_tipo||'',d.vehiculo2_marca||'',d.vehiculo2_modelo||'',d.vehiculo2_color||'',d.vehiculo2_patente||'',d.obs||'',d.ingreso||'']);
+    const nuevo=await db().query('SELECT * FROM clientes WHERE id=$1',[r.rows[0].id]);
+    res.json(nuevo.rows[0]);
+  }catch(e){res.status(500).json({error:e.message});}
+});
 
 router.put('/clientes/:id',auth,async(req,res)=>{try{const d=req.body;const c=(await db().query('SELECT * FROM clientes WHERE id=$1 AND sucursal_id=$2',[req.params.id,sid(req)])).rows[0];if(!c)return res.status(404).json({error:'No encontrado'});await db().query(`UPDATE clientes SET nombre=$1,dni=$2,cel=$3,tel=$4,tel_ref_parentesco=$5,dom=$6,trabajo=$7,modalidad=$8,turno_encargado_id=$9,vehiculo1_tipo=$10,vehiculo1_marca=$11,vehiculo1_modelo=$12,vehiculo1_color=$13,vehiculo1_patente=$14,vehiculo2_tipo=$15,vehiculo2_marca=$16,vehiculo2_modelo=$17,vehiculo2_color=$18,vehiculo2_patente=$19,obs=$20,ingreso=$21 WHERE id=$22 AND sucursal_id=$23`,[d.nombre,d.dni||'',d.cel||'',d.tel||'',d.tel_ref_parentesco||'',d.dom||'',d.trabajo||'',d.modalidad,d.turno_encargado_id||null,d.vehiculo1_tipo||'auto',d.vehiculo1_marca||'',d.vehiculo1_modelo||'',d.vehiculo1_color||'',d.vehiculo1_patente||'',d.vehiculo2_tipo||'',d.vehiculo2_marca||'',d.vehiculo2_modelo||'',d.vehiculo2_color||'',d.vehiculo2_patente||'',d.obs||'',d.ingreso||'',req.params.id,sid(req)]);res.json({ok:true});}catch(e){res.status(500).json({error:e.message});}});
 
@@ -81,6 +188,14 @@ router.get('/deudores',auth,async(req,res)=>{try{const s=sid(req);const {mes,des
 }else if(desde&&hasta){pagos=(await db().query('SELECT cliente_id,SUM(importe_abonado) as abonado,SUM(importe_esperado) as esperado FROM pagos WHERE sucursal_id=$1 AND mes>=$2 AND mes<=$3 AND anulado=0 GROUP BY cliente_id',[s,desde,hasta])).rows;}else{const m=mes||new Date().toISOString().slice(0,7);pagos=(await db().query('SELECT cliente_id,SUM(importe_abonado) as abonado,MAX(importe_esperado) as esperado FROM pagos WHERE sucursal_id=$1 AND mes=$2 AND anulado=0 GROUP BY cliente_id',[s,m])).rows;}const map={};pagos.forEach(p=>map[p.cliente_id]={abonado:parseFloat(p.abonado),esperado:parseFloat(p.esperado)});const deudores=clientes.map(c=>{const p=map[c.id];if(!p)return{...c,abonado:0,esperado:0,deuda:0,sin_pago:true};const deuda=parseFloat(p.esperado)-parseFloat(p.abonado);return{...c,abonado:p.abonado,esperado:p.esperado,deuda,sin_pago:false};}).filter(c=>c.sin_pago||c.deuda>0).sort((a,b)=>b.deuda-a.deuda);res.json(deudores);}catch(e){res.status(500).json({error:e.message});}});
 
 router.get('/reportes/pagos',auth,async(req,res)=>{try{const s=sid(req);const {desde,hasta}=req.query;const rows=(await db().query(`SELECT substring(p.mes,1,7) as mes, c.modalidad, SUM(p.importe_abonado) as total, COALESCE(SUM(p.monto_efectivo),0) as efectivo, COALESCE(SUM(p.monto_transferencia),0) as transferencia, COUNT(*) as cantidad FROM pagos p JOIN clientes c ON c.id=p.cliente_id WHERE p.sucursal_id=$1 AND p.anulado=0 AND p.mes>=$2 AND p.mes<=$3 GROUP BY substring(p.mes,1,7),c.modalidad ORDER BY mes DESC,modalidad`,[s,desde||'2020-01',hasta||'2099-12'])).rows;res.json(rows);}catch(e){res.status(500).json({error:e.message});}});
+
+// ─── ADMIN UTILS ───
+router.get('/admin/migrar-cupo-unico',admin,async(req,res)=>{
+  try{
+    await db().query('ALTER TABLE sucursales ADD COLUMN IF NOT EXISTS cupo_mensuales INTEGER');
+    res.json({ok:true,msg:'Columna cupo_mensuales agregada'});
+  }catch(e){res.status(500).json({error:e.message});}
+});
 
 router.get('/admin/fix-modalidad',admin,async(req,res)=>{try{await db().query("UPDATE tarifas SET modalidad_nombre='Comercial' WHERE modalidad_nombre='Mensual'");await db().query("UPDATE clientes SET modalidad=replace(modalidad,'mensual','comercial') WHERE modalidad LIKE '%mensual%'");res.json({ok:true,msg:'Listo'});}catch(e){res.status(500).json({error:e.message});}});
 
@@ -132,8 +247,6 @@ router.get('/horarios',auth,async(req,res)=>{try{const r=await db().query('SELEC
 
 router.put('/horarios/:id',admin,async(req,res)=>{try{const d=req.body;await db().query('UPDATE modalidades_horario SET hora_desde=$1,hora_hasta=$2,cuenta_cupo=$3 WHERE id=$4 AND sucursal_id=$5',[d.hora_desde,d.hora_hasta,d.cuenta_cupo,req.params.id,sid(req)]);res.json({ok:true});}catch(e){res.status(500).json({error:e.message});}});
 
-
-
 router.get('/global/resumen',async(req,res)=>{
   try{
     if(!req.session.user||req.session.user.rol!=='admin_global')
@@ -149,7 +262,6 @@ router.get('/global/resumen',async(req,res)=>{
       const deudoresRows=(await db2.query(`SELECT c.nombre,c.modalidad FROM clientes c WHERE c.sucursal_id=$1 AND c.activo=1 AND c.id NOT IN (SELECT DISTINCT p.cliente_id FROM pagos p WHERE p.sucursal_id=$1 AND p.mes=$2 AND p.anulado=0 AND p.importe_abonado>=p.importe_esperado)`,[sid,mes])).rows;
       const deudores=deudoresRows.length;
       const listaDeudores=deudoresRows.map(c=>c.nombre);
-      
       const tots=(await db2.query('SELECT modalidad,COUNT(*) as c FROM clientes WHERE sucursal_id=$1 AND activo=1 GROUP BY modalidad',[sid])).rows;
       const cnt={};tots.forEach(r=>{cnt[r.modalidad]=parseInt(r.c);});
       const ocupado=Object.values(cnt).reduce((a,b)=>a+b,0);
@@ -159,6 +271,5 @@ router.get('/global/resumen',async(req,res)=>{
     res.json({sucursales:data,totales,mes});
   }catch(e){res.status(500).json({error:e.message});}
 });
-
 
 module.exports=router;
