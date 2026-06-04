@@ -82,12 +82,17 @@ router.get('/cupos/preview',auth,async(req,res)=>{
     const{pico,franjas,franjasPico}=await calcPicoOcupacion(s);
     const suc=(await db().query('SELECT cupo_mensuales,lugares_fisicos,rotacion_promedio_manana,rotacion_promedio_tarde FROM sucursales WHERE id=$1',[s])).rows[0];
     res.json({
-      cupo_mensuales:suc.cupo_mensuales||null,
-      lugares_fisicos:suc.lugares_fisicos||null,
-      pico_actual:pico,
-      franjas_pico:franjasPico,
-      franjas_completo:franjas
-    });
+     res.json({
+  cupo_mensuales:suc.cupo_mensuales||null,
+  lugares_fisicos:suc.lugares_fisicos||null,
+  rotacion_promedio_manana:suc.rotacion_promedio_manana||null,
+  rotacion_promedio_tarde:suc.rotacion_promedio_tarde||null,
+  pico_actual:pico,
+  franjas_pico:franjasPico,
+  franjas_completo:franjas
+});
+
+Avisame cuando estén los 3 y seguimos con index.html.
   }catch(e){res.status(500).json({error:e.message});}
 });
 
