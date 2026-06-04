@@ -50,8 +50,8 @@ const cupo=suc.cupo_mensuales||null;
 const rot_m=suc.rotacion_promedio_manana||null;
 const rot_t=suc.rotacion_promedio_tarde||null;
 const buffer=3;
-const vacantes_manana=cupo!==null&&rot_m!==null?cupo-pico-(rot_m)-buffer:null;
-const vacantes_tarde=cupo!==null&&rot_t!==null?cupo-pico-(rot_t)-buffer:null;
+const vacantes_manana=cupo!==null&&rot_m!==null?cupo-pico-rot_m-buffer:null;
+const vacantes_tarde=cupo!==null&&rot_t!==null?cupo-pico-rot_t-buffer:null;
 res.json({
   sucursal:suc,
   cupo_mensuales:cupo,
