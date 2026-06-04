@@ -92,7 +92,6 @@ router.get('/cupos/preview',auth,async(req,res)=>{
   franjas_completo:franjas
 });
 
-Avisame cuando estén los 3 y seguimos con index.html.
   }catch(e){res.status(500).json({error:e.message});}
 });
 
