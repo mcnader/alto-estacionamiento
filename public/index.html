@@ -201,6 +201,7 @@
   <div class="mt">Dar de baja — cobro proporcional</div><input type="hidden" id="baja-id">
   <div class="fg2"><div class="fg"><label>Fecha de baja</label><input type="date" id="baja-fecha" onchange="calcBaja()"></div><div class="fg"><label>Tarifa mensual</label><input type="number" id="baja-tar" readonly style="background:var(--bg)"></div></div>
   <div id="baja-calc" style="display:none"></div>
+  <div class="fg2"><div class="fg"><label>Importe a cobrar (editable)</label><input type="number" id="baja-prop" placeholder="0" oninput="actualizarTotalBaja()"></div><div class="fg"><label>Forma de pago</label><select id="baja-fpago"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option></select></div></div>
   <div class="fg"><label>Observaciones</label><input type="text" id="baja-obs" placeholder="Motivo de baja..."></div>
   <div class="mf"><button class="btn" onclick="closeMo('mo-baja')">Cancelar</button><button class="btn btn-dr" onclick="confirmarBaja()">Confirmar baja</button></div>
 </div></div>
@@ -487,8 +488,20 @@ if(llave>0&&$('cli-ingreso').value){
 }
 CLIS=await api('GET','/api/clientes');closeMo('mo-cli');renderClientes();toast(eCli?'Cliente actualizado':'Cliente agregado');}catch(e){toast(e.message,false);}}
 function abrirBaja(id){const c=CLIS.find(x=>x.id===id);const tar=getTar(c.modalidad,c.vehiculo1_tipo||'auto',15);closeMo('mo-cli');$('baja-id').value=id;$('baja-fecha').value=hoy();$('baja-tar').value=tar;$('baja-calc').style.display='none';calcBaja();openMo('mo-baja');}
-function calcBaja(){const f=$('baja-fecha').value;const tar=parseInt($('baja-tar').value)||0;if(!f||!tar){$('baja-calc').style.display='none';return;}const d=new Date(f+'T12:00:00');const dm=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();const da=d.getDate();const prop=Math.round(tar*da/dm);$('baja-calc').style.display='block';$('baja-calc').innerHTML=`<div class="calc-box cb-t0"><div class="cb-lbl">Cobro proporcional</div><div class="cb-val">${pesos(prop)}</div><div class="cb-det">${da} días de ${dm} · ${pesos(tar)} / ${dm} × ${da}</div></div>`;}
-async function confirmarBaja(){const id=$('baja-id').value;const f=$('baja-fecha').value;const tar=parseInt($('baja-tar').value)||0;const d=new Date(f+'T12:00:00');const dm=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();const prop=Math.round(tar*d.getDate()/dm);try{await api('POST',`/api/clientes/${id}/baja`,{fecha_baja:f,cobro_proporcional:prop});CLIS=await api('GET','/api/clientes');closeMo('mo-baja');renderClientes();toast('Baja registrada. Cobro proporcional: '+pesos(prop));}catch(e){toast(e.message,false);}}
+function calcBaja(){const f=$('baja-fecha').value;const tar=parseInt($('baja-tar').value)||0;if(!f||!tar){$('baja-calc').style.display='none';return;}const d=new Date(f+'T12:00:00');const dm=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();const da=d.getDate();const prop=Math.round(tar*da/dm);$('baja-calc').style.display='block';$('baja-calc').innerHTML=`<div class="calc-box cb-t0"><div class="cb-lbl">Cobro proporcional</div><div class="cb-val">${pesos(prop)}</div><div class="cb-det">${da} días de ${dm} · ${pesos(tar)} / ${dm} × ${da}</div></div>`;$('baja-prop').value=prop;}
+async function confirmarBaja(){const id=$('baja-id').value;const f=$('baja-fecha').value;const tar=parseInt($('baja-tar').value)||0;const d=new Date(f+'T12:00:00');const dm=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();const prop=Math.round(tar*d.getDate()/dm);try{await api('POST',`/api/clientes/${id}/baja`,{fecha_baja:f,cobro_proporcional:prop});
+const propEditado=parseFloat($('baja-prop').value)||0;
+const fpagoBaja=$('baja-fpago').value;
+if(propEditado>0){
+  const mesBaja=f.slice(0,7);
+  const cli=CLIS.find(x=>x.id==id);
+  const diaBaja=new Date(f+'T12:00:00').getDate();
+  const espBaja=getTar(cli.modalidad,cli.vehiculo1_tipo||'auto',diaBaja);
+  let meBaja=0,mtBaja=0;
+  if(fpagoBaja==='efectivo')meBaja=propEditado;else mtBaja=propEditado;
+  await api('POST','/api/pagos',{cliente_id:parseInt(id),fecha:f,mes:mesBaja,importe_esperado:espBaja,importe_abonado:propEditado,monto_efectivo:meBaja,monto_transferencia:mtBaja,forma_pago:fpagoBaja,encargado_id:SES.id,obs:'Cobro proporcional baja'});
+}
+CLIS=await api('GET','/api/clientes');closeMo('mo-baja');renderClientes();toast('Baja registrada. Cobro proporcional: '+pesos(propEditado||prop));}catch(e){toast(e.message,false);}}
 async function reactivarCli(id){try{await api('POST',`/api/clientes/${id}/reactivar`);CLIS=await api('GET','/api/clientes');closeMo('mo-cli');renderClientes();toast('Cliente reactivado');}catch(e){toast(e.message,false);}}
 
 async function initPagos(){const s=$('pago-cli');s.innerHTML='<option value="">— Seleccionar —</option>';CLIS.filter(c=>c.activo).sort((a,b)=>a.nombre.localeCompare(b.nombre)).forEach(c=>{const o=document.createElement('option');o.value=c.id;const p=[c.vehiculo1_patente,c.vehiculo2_patente].filter(Boolean).join('/');o.textContent=c.nombre+(p?' ('+p+')':'');s.appendChild(o);});poblarEnc();$('pago-fecha').value=hoy();$('pago-mes').value='';$('pago-ok').style.display='none';$('calc-block').style.display='none';$('saldo-prev').style.display='none';toggleMixto();await renderPrec();}
