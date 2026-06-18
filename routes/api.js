@@ -45,7 +45,7 @@ router.get('/cupos',auth,async(req,res)=>{
     const tots=(await db().query('SELECT modalidad,COUNT(*) as c FROM clientes WHERE sucursal_id=$1 AND activo=1 GROUP BY modalidad',[s])).rows;
     const cnt={};tots.forEach(r=>{cnt[r.modalidad]=parseInt(r.c);});
     const total=Object.values(cnt).reduce((a,b)=>a+b,0);
-const{pico,franjas,franjasPico}=await calcPicoOcupacion(s);
+    const{pico,franjas,franjasPico}=await calcPicoOcupacion(s);
     const cupo=suc.cupo_mensuales||null;
     const rot_m=suc.rotacion_promedio_manana||null;
     const rot_t=suc.rotacion_promedio_tarde||null;
@@ -53,20 +53,6 @@ const{pico,franjas,franjasPico}=await calcPicoOcupacion(s);
     const vacantes_manana=cupo!==null&&rot_m!==null?cupo-pico-rot_m-buffer:null;
     const vacantes_tarde=cupo!==null&&rot_t!==null?cupo-pico-rot_t-buffer:null;
     res.json({sucursal:suc,cupo_mensuales:cupo,rotacion_promedio_manana:rot_m,rotacion_promedio_tarde:rot_t,ocupado_total:total,pico_simultaneo:pico,franjas_pico:franjasPico,franjas_completo:franjas,detalle_modalidades:cnt,libre:cupo!==null?cupo-pico:null,vacantes_manana,vacantes_tarde});
-  }catch(e){res.status(500).json({error:e.message});}
-});
-  cupo_mensuales:cupo,
-  rotacion_promedio_manana:rot_m,
-  rotacion_promedio_tarde:rot_t,
-  ocupado_total:total,
-  pico_simultaneo:pico,
-  franjas_pico:franjasPico,
-  franjas_completo:franjas,
-  detalle_modalidades:cnt,
-  libre:cupo!==null?cupo-pico:null,
-  vacantes_manana,
-  vacantes_tarde
-});
   }catch(e){res.status(500).json({error:e.message});}
 });
 
@@ -83,16 +69,14 @@ router.get('/cupos/preview',auth,async(req,res)=>{
     const{pico,franjas,franjasPico}=await calcPicoOcupacion(s);
     const suc=(await db().query('SELECT cupo_mensuales,lugares_fisicos,rotacion_promedio_manana,rotacion_promedio_tarde FROM sucursales WHERE id=$1',[s])).rows[0];
     res.json({
-     res.json({
-  cupo_mensuales:suc.cupo_mensuales||null,
-  lugares_fisicos:suc.lugares_fisicos||null,
-  rotacion_promedio_manana:suc.rotacion_promedio_manana||null,
-  rotacion_promedio_tarde:suc.rotacion_promedio_tarde||null,
-  pico_actual:pico,
-  franjas_pico:franjasPico,
-  franjas_completo:franjas
-});
-
+      cupo_mensuales:suc.cupo_mensuales||null,
+      lugares_fisicos:suc.lugares_fisicos||null,
+      rotacion_promedio_manana:suc.rotacion_promedio_manana||null,
+      rotacion_promedio_tarde:suc.rotacion_promedio_tarde||null,
+      pico_actual:pico,
+      franjas_pico:franjasPico,
+      franjas_completo:franjas
+    });
   }catch(e){res.status(500).json({error:e.message});}
 });
 
