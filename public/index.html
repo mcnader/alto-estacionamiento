@@ -480,7 +480,7 @@ if(prop>0&&$('cli-ingreso').value){
   else{me=prop;mt=0;}
   const dia=new Date(ingreso+'T12:00:00').getDate();
   const esp=getTar(d.modalidad,d.vehiculo1_tipo||'auto',dia);
-  await api('POST','/api/pagos',{cliente_id:cli.id,fecha:ingreso,mes:mesIngreso,importe_esperado:esp,importe_abonado:prop,monto_efectivo:me,monto_transferencia:mt,forma_pago:fpago==='mixto'?'efectivo':fpago,encargado_id:SES.id,obs:'Pago proporcional ingreso'});
+  await api('POST','/api/pagos',{cliente_id:cli.id,fecha:ingreso,mes:mesIngreso,importe_esperado:prop,importe_abonado:prop,monto_efectivo:me,monto_transferencia:mt,forma_pago:fpago==='mixto'?'efectivo':fpago,encargado_id:SES.id,obs:'Pago proporcional ingreso'});
 }
 if(llave>0&&$('cli-ingreso').value){
   await api('POST','/api/senas',{cliente_id:cli.id,cliente_nombre:d.nombre,concepto:'llave',monto:llave,fecha_entrega:$('cli-ingreso').value,estado:'activa',obs:'Seña al ingreso'});
