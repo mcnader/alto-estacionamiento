@@ -47,19 +47,24 @@ router.get('/cupos',auth,async(req,res)=>{
     const cnt={};tots.forEach(r=>{cnt[r.modalidad]=parseInt(r.c);});
     const total=Object.values(cnt).reduce((a,b)=>a+b,0);
     const{pico,franjas,franjasPico}=await calcPicoOcupacion(s);
-    const cupo=suc.cupo_mensuales||null;
-    const rot_m=suc.rotacion_promedio_manana||null;
-    const rot_t=suc.rotacion_promedio_tarde||null;
-    const buffer=3;
-    const vacantes_manana=cupo!==null&&rot_m!==null?cupo-pico-rot_m-buffer:null;
-    const vacantes_tarde=cupo!==null&&rot_t!==null?cupo-pico-rot_t-buffer:null;
-    res.json({sucursal:suc,cupo_mensuales:cupo,rotacion_promedio_manana:rot_m,rotacion_promedio_tarde:rot_t,ocupado_total:total,pico_simultaneo:pico,franjas_pico:franjasPico,franjas_completo:franjas,detalle_modalidades:cnt,libre:cupo!==null?cupo-pico:null,vacantes_manana,vacantes_tarde});
+   const cupo=suc.cupo_mensuales||null;
+const cupo_motos=suc.cupo_motos||null;
+const rot_m=suc.rotacion_promedio_manana||null;
+const rot_t=suc.rotacion_promedio_tarde||null;
+const rot_m_motos=suc.rotacion_promedio_manana_motos||null;
+const rot_t_motos=suc.rotacion_promedio_tarde_motos||null;
+const buffer=3;
+const vacantes_manana=cupo!==null&&rot_m!==null?cupo-pico-rot_m-buffer:null;
+const vacantes_tarde=cupo!==null&&rot_t!==null?cupo-pico-rot_t-buffer:null;
+const vacantes_motos_manana=cupo_motos!==null&&rot_m_motos!==null?cupo_motos-pico_motos-rot_m_motos-buffer:null;
+const vacantes_motos_tarde=cupo_motos!==null&&rot_t_motos!==null?cupo_motos-pico_motos-rot_t_motos-buffer:null;
+res.json({sucursal:suc,cupo_mensuales:cupo,cupo_motos,rotacion_promedio_manana:rot_m,rotacion_promedio_tarde:rot_t,rotacion_promedio_manana_motos:rot_m_motos,rotacion_promedio_tarde_motos:rot_t_motos,ocupado_total:total,pico_simultaneo:pico,pico_motos,franjas_pico:franjasPico,franjas_completo:franjas,detalle_modalidades:cnt,libre:cupo!==null?cupo-pico:null,vacantes_manana,vacantes_tarde,vacantes_motos_manana,vacantes_motos_tarde});
   }catch(e){res.status(500).json({error:e.message});}
 });
 
 router.put('/cupos',auth,async(req,res)=>{
   try{
-    await db().query('UPDATE sucursales SET cupo_mensuales=$1,rotacion_promedio_manana=$2,rotacion_promedio_tarde=$3 WHERE id=$4',[req.body.cupo_mensuales||null,req.body.rotacion_promedio_manana||null,req.body.rotacion_promedio_tarde||null,sid(req)]);
+    await db().query('UPDATE sucursales SET cupo_mensuales=$1,rotacion_promedio_manana=$2,rotacion_promedio_tarde=$3,cupo_motos=$4,rotacion_promedio_manana_motos=$5,rotacion_promedio_tarde_motos=$6 WHERE id=$7',[req.body.cupo_mensuales||null,req.body.rotacion_promedio_manana||null,req.body.rotacion_promedio_tarde||null,req.body.cupo_motos||null,req.body.rotacion_promedio_manana_motos||null,req.body.rotacion_promedio_tarde_motos||null,sid(req)]);
     res.json({ok:true});
   }catch(e){res.status(500).json({error:e.message});}
 });
