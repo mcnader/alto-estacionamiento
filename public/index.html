@@ -245,8 +245,11 @@
   <p style="font-size:12px;color:var(--text3);margin-bottom:16px">Cantidad máxima de mensuales que pueden estar simultáneamente en la playa. El sistema calcula automáticamente según la modalidad de cada cliente.</p>
   <div class="fg"><label>Lugares físicos totales</label><input type="number" id="cupo-lugares" placeholder="Ej: 44"></div>
   <hr class="sep">
-  <div class="fg"><label>Cupo de mensuales — máx simultáneos</label><input type="number" id="cupo-mensuales" placeholder="Ej: 23"></div>
+ <div class="fg"><label>Cupo de mensuales — máx simultáneos</label><input type="number" id="cupo-mensuales" placeholder="Ej: 23"></div>
   <p style="font-size:11px;color:var(--text3);margin-top:-6px">Un mensual 24hs ocupa lugar en ambos turnos. El sistema avisa si se supera este número al dar de alta un cliente.</p>
+  <hr class="sep">
+  <div class="fg2"><div class="fg"><label>Rotación promedio mañana</label><input type="number" id="cupo-rot-manana" placeholder="Ej: 4"></div><div class="fg"><label>Rotación promedio tarde</label><input type="number" id="cupo-rot-tarde" placeholder="Ej: 2"></div></div>
+  <p style="font-size:11px;color:var(--text3);margin-top:-6px">Promedio de autos de rotación simultáneos en cada turno. Calculado desde los archivos de tickets.</p>
   <div class="mf"><button class="btn" onclick="closeMo('mo-cupos')">Cancelar</button><button class="btn btn-p" onclick="guardarCupos()"><i data-lucide="save"></i> Guardar</button></div>
 </div></div>
 
