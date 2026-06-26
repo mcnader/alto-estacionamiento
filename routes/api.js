@@ -25,18 +25,19 @@ async function calcPicoOcupacion(sucursal_id){
   const horarios=(await db().query('SELECT * FROM modalidades_horario WHERE sucursal_id=$1 AND cuenta_cupo=true',[sucursal_id])).rows;
   const clientes=(await db().query("SELECT modalidad,vehiculo1_tipo,vehiculo2_tipo FROM clientes WHERE sucursal_id=$1 AND activo=1",[sucursal_id])).rows;
   const franjas=new Array(33).fill(0);
+  const franjas_motos=new Array(33).fill(0);
   for(const c of clientes){
     const esMotos=(c.vehiculo1_tipo==='moto'&&(!c.vehiculo2_tipo||c.vehiculo2_tipo==='moto'||c.vehiculo2_tipo===''));
-    if(esMotos)continue;
     const h=horarios.find(x=>x.modalidad_id===c.modalidad);
     if(!h)continue;
-    for(let i=h.hora_desde;i<h.hora_hasta&&i<33;i++)franjas[i]++;
+    if(esMotos){for(let i=h.hora_desde;i<h.hora_hasta&&i<33;i++)franjas_motos[i]++;}
+    else{for(let i=h.hora_desde;i<h.hora_hasta&&i<33;i++)franjas[i]++;}
   }
   const pico=Math.max(...franjas);
+  const pico_motos=Math.max(...franjas_motos);
   const franjasPico=franjas.map((v,i)=>({hora:i,ocupacion:v})).filter(f=>f.ocupacion===pico&&pico>0);
-  return{pico,franjas,franjasPico};
+  return{pico,pico_motos,franjas,franjas_motos,franjasPico};
 }
-
 // ─── CUPOS ───
 router.get('/cupos',auth,async(req,res)=>{
   try{
