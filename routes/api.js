@@ -46,8 +46,8 @@ router.get('/cupos',auth,async(req,res)=>{
     const tots=(await db().query('SELECT modalidad,COUNT(*) as c FROM clientes WHERE sucursal_id=$1 AND activo=1 GROUP BY modalidad',[s])).rows;
     const cnt={};tots.forEach(r=>{cnt[r.modalidad]=parseInt(r.c);});
     const total=Object.values(cnt).reduce((a,b)=>a+b,0);
-    const{pico,franjas,franjasPico}=await calcPicoOcupacion(s);
-   const cupo=suc.cupo_mensuales||null;
+    const{pico,pico_motos,franjas,franjas_motos,franjasPico}=await calcPicoOcupacion(s);
+    const cupo=suc.cupo_mensuales||null;
 const cupo_motos=suc.cupo_motos||null;
 const rot_m=suc.rotacion_promedio_manana||null;
 const rot_t=suc.rotacion_promedio_tarde||null;
