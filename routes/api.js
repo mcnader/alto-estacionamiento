@@ -53,7 +53,7 @@ const rot_m=suc.rotacion_promedio_manana||null;
 const rot_t=suc.rotacion_promedio_tarde||null;
 const rot_m_motos=suc.rotacion_promedio_manana_motos||null;
 const rot_t_motos=suc.rotacion_promedio_tarde_motos||null;
-const buffer=3;
+const buffer=0;
 const vacantes_manana=cupo!==null&&rot_m!==null?cupo-pico-rot_m-buffer:null;
 const vacantes_tarde=cupo!==null&&rot_t!==null?cupo-pico-rot_t-buffer:null;
 const vacantes_motos_manana=cupo_motos!==null&&rot_m_motos!==null?cupo_motos-pico_motos-rot_m_motos-buffer:null;
