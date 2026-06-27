@@ -24,20 +24,26 @@ router.put('/usuarios/:id',admin,async(req,res)=>{try{const u=(await db().query(
 async function calcPicoOcupacion(sucursal_id){
   const horarios=(await db().query('SELECT * FROM modalidades_horario WHERE sucursal_id=$1 AND cuenta_cupo=true',[sucursal_id])).rows;
   const clientes=(await db().query("SELECT modalidad,vehiculo1_tipo,vehiculo2_tipo FROM clientes WHERE sucursal_id=$1 AND activo=1",[sucursal_id])).rows;
+  const suc=(await db().query('SELECT pct_presencia_m24,pct_presencia_t12 FROM sucursales WHERE id=$1',[sucursal_id])).rows[0];
+  const pctM24=(suc?.pct_presencia_m24||65)/100;
+  const pctT12=(suc?.pct_presencia_t12||90)/100;
   const franjas=new Array(33).fill(0);
   const franjas_motos=new Array(33).fill(0);
   for(const c of clientes){
     const esMotos=(c.vehiculo1_tipo==='moto'&&(!c.vehiculo2_tipo||c.vehiculo2_tipo==='moto'||c.vehiculo2_tipo===''));
     const h=horarios.find(x=>x.modalidad_id===c.modalidad);
     if(!h)continue;
-    if(esMotos){for(let i=h.hora_desde;i<h.hora_hasta&&i<33;i++)franjas_motos[i]++;}
-    else{for(let i=h.hora_desde;i<h.hora_hasta&&i<33;i++)franjas[i]++;}
+    const esM24=c.modalidad==='mensual24';
+    const peso=esM24?pctM24:pctT12;
+    if(esMotos){for(let i=h.hora_desde;i<h.hora_hasta&&i<33;i++)franjas_motos[i]+=peso;}
+    else{for(let i=h.hora_desde;i<h.hora_hasta&&i<33;i++)franjas[i]+=peso;}
   }
-  const pico=Math.max(...franjas);
-  const pico_motos=Math.max(...franjas_motos);
-  const franjasPico=franjas.map((v,i)=>({hora:i,ocupacion:v})).filter(f=>f.ocupacion===pico&&pico>0);
-  return{pico,pico_motos,franjas,franjas_motos,franjasPico};
+  const pico=Math.round(Math.max(...franjas));
+  const pico_motos=Math.round(Math.max(...franjas_motos));
+  const franjasPico=franjas.map((v,i)=>({hora:i,ocupacion:Math.round(v)})).filter(f=>f.ocupacion===pico&&pico>0);
+  return{pico,pico_motos,franjas:franjas.map(v=>Math.round(v)),franjas_motos:franjas_motos.map(v=>Math.round(v)),franjasPico};
 }
+
 // ─── CUPOS ───
 router.get('/cupos',auth,async(req,res)=>{
   try{
@@ -64,7 +70,7 @@ res.json({sucursal:suc,cupo_mensuales:cupo,cupo_motos,rotacion_promedio_manana:r
 
 router.put('/cupos',auth,async(req,res)=>{
   try{
-    await db().query('UPDATE sucursales SET cupo_mensuales=$1,rotacion_promedio_manana=$2,rotacion_promedio_tarde=$3,cupo_motos=$4,rotacion_promedio_manana_motos=$5,rotacion_promedio_tarde_motos=$6 WHERE id=$7',[req.body.cupo_mensuales||null,req.body.rotacion_promedio_manana||null,req.body.rotacion_promedio_tarde||null,req.body.cupo_motos||null,req.body.rotacion_promedio_manana_motos||null,req.body.rotacion_promedio_tarde_motos||null,sid(req)]);
+    await db().query('UPDATE sucursales SET cupo_mensuales=$1,rotacion_promedio_manana=$2,rotacion_promedio_tarde=$3,cupo_motos=$4,rotacion_promedio_manana_motos=$5,rotacion_promedio_tarde_motos=$6,pct_presencia_m24=$7,pct_presencia_t12=$8 WHERE id=$9',[req.body.cupo_mensuales||null,req.body.rotacion_promedio_manana||null,req.body.rotacion_promedio_tarde||null,req.body.cupo_motos||null,req.body.rotacion_promedio_manana_motos||null,req.body.rotacion_promedio_tarde_motos||null,req.body.pct_presencia_m24||65,req.body.pct_presencia_t12||90,sid(req)]);
     res.json({ok:true});
   }catch(e){res.status(500).json({error:e.message});}
 });
