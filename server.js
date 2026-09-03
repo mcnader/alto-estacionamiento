@@ -10,6 +10,7 @@ app.use(session({secret:'altoE_2024',resave:false,saveUninitialized:false,cookie
 app.use(express.static(path.join(__dirname,'public')));
 app.use('/api/auth',require('./routes/auth'));
 app.use('/api',require('./routes/api'));
+app.use(require('./routes/webhook_mercadopago'));
 app.use((req,res)=>res.sendFile(path.join(__dirname,'public','index.html')));
 
 const PORT=process.env.PORT||3000;
