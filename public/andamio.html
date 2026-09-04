@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Comprobantes El Andamio</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,sans-serif}
+  body{background:#f5f4f0;padding:16px;max-width:480px;margin:0 auto}
+  h1{font-size:18px;margin-bottom:16px}
+  .card{background:#fff;border:1px solid #e0dfd8;border-radius:12px;padding:16px;margin-bottom:14px}
+  label{display:block;font-size:11px;font-weight:600;color:#666;margin-bottom:4px;text-transform:uppercase}
+  input{width:100%;padding:10px;border:1px solid #e0dfd8;border-radius:8px;font-size:15px;margin-bottom:12px}
+  button{width:100%;padding:12px;border:none;border-radius:8px;background:#1a1a18;color:#fff;font-size:15px;font-weight:600;cursor:pointer}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;font-size:10px;color:#999;text-transform:uppercase;padding:6px 4px;border-bottom:1px solid #eee}
+  td{padding:8px 4px;border-bottom:1px solid #f5f4f0}
+  .badge{display:inline-block;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600}
+  .b-gy{background:#f0f0f0;color:#555}
+  .b-gr{background:#e8f5ee;color:#1a6b3c}
+  .b-rd{background:#fdeaea;color:#8b2020}
+  .b-am{background:#fef3db;color:#7a4f00}
+  #clave-box{text-align:center;margin-top:60px}
+</style>
+</head>
+<body>
+
+<div id="clave-box">
+  <h1>Comprobantes El Andamio</h1>
+  <div class="card">
+    <label>Clave de acceso</label>
+    <input type="password" id="clave-input" placeholder="Clave">
+    <button onclick="entrar()">Entrar</button>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+  <h1>Comprobantes El Andamio <span style="font-size:11px;color:#999;font-weight:400">(uso urgente)</span></h1>
+
+  <div class="card">
+    <label>Importe transferido</label>
+    <input type="number" id="monto" placeholder="0">
+    <label>N° operación completo, o solo los últimos 4 dígitos</label>
+    <input type="text" id="nro" placeholder="Ej: 5807 o 169300365807">
+    <button onclick="cargar()">Cargar comprobante</button>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <strong style="font-size:12px;color:#999;text-transform:uppercase">Últimos comprobantes</strong>
+      <button style="width:auto;padding:6px 12px;font-size:12px" onclick="listar()">↻ Actualizar</button>
+    </div>
+    <table>
+      <thead><tr><th>Hora</th><th>Importe</th><th>Estado</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+let CLAVE = localStorage.getItem('andamio_clave') || '';
+
+function entrar(){
+  CLAVE = document.getElementById('clave-input').value.trim();
+  localStorage.setItem('andamio_clave', CLAVE);
+  mostrarApp();
+}
+
+async function api(method, path, body){
+  const opts = { method, headers: { 'Content-Type':'application/json', 'x-clave': CLAVE } };
+  if(body) opts.body = JSON.stringify(body);
+  const r = await fetch(path, opts);
+  if(r.status === 401){ alert('Clave incorrecta'); localStorage.removeItem('andamio_clave'); location.reload(); return; }
+  return r.json();
+}
+
+async function mostrarApp(){
+  document.getElementById('clave-box').style.display='none';
+  document.getElementById('app').style.display='block';
+  await listar();
+}
+
+async function cargar(){
+  const monto = parseFloat(document.getElementById('monto').value) || 0;
+  const nro = document.getElementById('nro').value.trim();
+  if(!monto){ alert('Ingresá el importe'); return; }
+  await api('POST','/andamio-urgente/comprobantes', { monto, nro_operacion: nro || null });
+  document.getElementById('monto').value='';
+  document.getElementById('nro').value='';
+  await listar();
+}
+
+const badges = {
+  pendiente: '<span class="badge b-gy">Pendiente</span>',
+  verificado: '<span class="badge b-gr">✓ Verificado</span>',
+  sin_matchear: '<span class="badge b-rd">⚠ Sin matchear</span>',
+  revisar_manual: '<span class="badge b-am">Revisar manual</span>',
+};
+
+async function listar(){
+  const lista = await api('GET','/andamio-urgente/comprobantes');
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = (lista||[]).map(c => `<tr>
+    <td>${new Date(c.fecha_hora).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}</td>
+    <td>$${Math.round(c.monto).toLocaleString('es-AR')}</td>
+    <td>${badges[c.estado]||c.estado}</td>
+  </tr>`).join('') || '<tr><td colspan="3">Sin comprobantes</td></tr>';
+}
+
+if(CLAVE) mostrarApp();
+</script>
+</body>
+</html>
