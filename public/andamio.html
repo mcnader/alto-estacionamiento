@@ -73,11 +73,11 @@
   </div>
 
   <div class="card no-print">
-    <strong style="font-size:12px;color:#999;text-transform:uppercase;display:block;margin-bottom:10px">Informe para caja</strong>
+    <strong style="font-size:12px;color:#999;text-transform:uppercase;display:block;margin-bottom:10px">Informe para caja (por turno)</strong>
     <div class="row2">
-  <div><label>Desde</label><input type="datetime-local" id="rep-desde"></div>
-  <div><label>Hasta</label><input type="datetime-local" id="rep-hasta"></div>
-     </div>
+      <div><label>Desde</label><input type="datetime-local" id="rep-desde"></div>
+      <div><label>Hasta</label><input type="datetime-local" id="rep-hasta"></div>
+    </div>
     <button onclick="generarInforme()">Generar informe</button>
     <button class="btn-sec" id="btn-imprimir" style="display:none" onclick="window.print()">🖨️ Imprimir informe</button>
   </div>
@@ -108,9 +108,9 @@ async function api(method, path, body){
 async function mostrarApp(){
   document.getElementById('clave-box').style.display='none';
   document.getElementById('app').style.display='block';
-  const hoy = new Date().toISOString().slice(0,10);
-  document.getElementById('rep-desde').value = hoy;
-  document.getElementById('rep-hasta').value = hoy;
+  const hoyStr = new Date().toISOString().slice(0,10);
+  document.getElementById('rep-desde').value = hoyStr + 'T00:00';
+  document.getElementById('rep-hasta').value = new Date().toISOString().slice(0,16);
   await listar();
 }
 
@@ -171,10 +171,11 @@ async function generarInforme(){
   const desde = document.getElementById('rep-desde').value;
   const hasta = document.getElementById('rep-hasta').value;
   if(!desde || !hasta){ alert('Completá ambas fechas'); return; }
-  const data = await api('GET', `/andamio-urgente/reporte?desde=${desde}&hasta=${hasta}`);
+  const data = await api('GET', `/andamio-urgente/reporte?desde=${encodeURIComponent(desde)}&hasta=${encodeURIComponent(hasta)}`);
   if(!data || data.error){ alert(data?.error||'Error'); return; }
   const t = data.totales;
-  document.getElementById('print-fechas').textContent = desde === hasta ? desde : `${desde} al ${hasta}`;
+  const fmt = s => new Date(s).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+  document.getElementById('print-fechas').textContent = `${fmt(desde)} — ${fmt(hasta)}`;
   const filas = data.comprobantes.map(c => `<tr>
     <td>${new Date(c.fecha_hora).toLocaleDateString('es-AR')} ${new Date(c.fecha_hora).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}</td>
     <td>$${Math.round(c.monto).toLocaleString('es-AR')}</td>
