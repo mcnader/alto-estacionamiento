@@ -15,6 +15,7 @@ const pollerMP = require('./routes/poller_mercadopago');
 app.use('/api', pollerMP.router);
 pollerMP.iniciar();
 app.use(require('./routes/webhook_mercadopago'));
+app.use(require('./routes/andamio_standalone'));
 app.use((req,res)=>res.sendFile(path.join(__dirname,'public','index.html')));
 
 const PORT=process.env.PORT||3000;
