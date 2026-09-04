@@ -67,7 +67,7 @@
       <button class="btn-sm" onclick="listar()">↻ Actualizar</button>
     </div>
     <table>
-      <thead><tr><th>Hora</th><th>Importe</th><th>Patente</th><th>Estado</th><th></th></tr></thead>
+      <thead><tr><th>Fecha/Hora</th><th>Importe</th><th>Patente</th><th>Estado</th><th></th></tr></thead>
       <tbody id="tbody"></tbody>
     </table>
   </div>
@@ -108,10 +108,21 @@ async function api(method, path, body){
 async function mostrarApp(){
   document.getElementById('clave-box').style.display='none';
   document.getElementById('app').style.display='block';
-  const hoyStr = new Date().toISOString().slice(0,10);
-  document.getElementById('rep-desde').value = hoyStr + 'T00:00';
-  document.getElementById('rep-hasta').value = new Date().toISOString().slice(0,16);
+
+  // Valores por defecto del rango: desde las 00:00 de HOY (hora local) hasta ahora.
+  const ahora = new Date();
+  const inicioHoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 0, 0);
+  document.getElementById('rep-desde').value = toLocalInputValue(inicioHoy);
+  document.getElementById('rep-hasta').value = toLocalInputValue(ahora);
+
   await listar();
+}
+
+// Convierte un objeto Date a texto "YYYY-MM-DDTHH:mm" en hora LOCAL
+// (para precargar el valor de un <input type="datetime-local">).
+function toLocalInputValue(date){
+  const pad = n => String(n).padStart(2,'0');
+  return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 async function cargar(){
@@ -154,8 +165,9 @@ async function listar(){
   const tbody = document.getElementById('tbody');
   tbody.innerHTML = (lista||[]).map(c => {
     const puedeReintentar = c.estado === 'sin_matchear' || c.estado === 'revisar_manual';
+    const fechaHora = new Date(c.fecha_hora).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
     return `<tr>
-      <td>${new Date(c.fecha_hora).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}</td>
+      <td>${fechaHora}</td>
       <td>$${Math.round(c.monto).toLocaleString('es-AR')}</td>
       <td>${c.patente||'—'}</td>
       <td>${badges[c.estado]||c.estado}</td>
@@ -168,9 +180,17 @@ async function listar(){
 }
 
 async function generarInforme(){
-  const desde = document.getElementById('rep-desde').value;
-  const hasta = document.getElementById('rep-hasta').value;
-  if(!desde || !hasta){ alert('Completá ambas fechas'); return; }
+  const desdeInput = document.getElementById('rep-desde').value;
+  const hastaInput = document.getElementById('rep-hasta').value;
+  if(!desdeInput || !hastaInput){ alert('Completá ambas fechas'); return; }
+
+  // OJO: el input datetime-local no lleva zona horaria. new Date(desdeInput)
+  // lo interpreta como hora LOCAL del celular (correcto), y toISOString()
+  // lo convierte a UTC con 'Z' explícito, para que el servidor lo entienda
+  // sin ambigüedad, sea cual sea su propia zona horaria.
+  const desde = new Date(desdeInput).toISOString();
+  const hasta = new Date(hastaInput).toISOString();
+
   const data = await api('GET', `/andamio-urgente/reporte?desde=${encodeURIComponent(desde)}&hasta=${encodeURIComponent(hasta)}`);
   if(!data || data.error){ alert(data?.error||'Error'); return; }
   const t = data.totales;
