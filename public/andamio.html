@@ -13,6 +13,7 @@
   input{width:100%;padding:10px;border:1px solid #e0dfd8;border-radius:8px;font-size:15px;margin-bottom:12px}
   button{width:100%;padding:12px;border:none;border-radius:8px;background:#1a1a18;color:#fff;font-size:15px;font-weight:600;cursor:pointer}
   .btn-sm{width:auto;padding:6px 12px;font-size:12px}
+  .btn-sec{background:#fff;color:#1a1a18;border:1px solid #e0dfd8;margin-top:8px}
   table{width:100%;border-collapse:collapse;font-size:13px}
   th{text-align:left;font-size:10px;color:#999;text-transform:uppercase;padding:6px 4px;border-bottom:1px solid #eee}
   td{padding:8px 4px;border-bottom:1px solid #f5f4f0;vertical-align:middle}
@@ -26,6 +27,14 @@
   .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .tot{background:#f5f4f0;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:13px}
   .tot div{display:flex;justify-content:space-between;margin-bottom:3px}
+  #print-titulo{display:none}
+  @media print{
+    body>*:not(#print-area){display:none!important}
+    #print-area{display:block!important}
+    #print-titulo{display:block!important;margin-bottom:10px}
+    .no-print{display:none!important}
+    button{display:none!important}
+  }
 </style>
 </head>
 <body>
@@ -47,6 +56,8 @@
     <input type="number" id="monto" placeholder="0">
     <label>N° operación completo, o solo los últimos 4 dígitos</label>
     <input type="text" id="nro" placeholder="Ej: 5807 o 169300365807">
+    <label>Patente (opcional)</label>
+    <input type="text" id="patente" placeholder="Ej: AB123CD" style="text-transform:uppercase">
     <button id="btn-cargar" onclick="cargar()">Cargar comprobante</button>
   </div>
 
@@ -56,19 +67,24 @@
       <button class="btn-sm" onclick="listar()">↻ Actualizar</button>
     </div>
     <table>
-      <thead><tr><th>Hora</th><th>Importe</th><th>Estado</th><th></th></tr></thead>
+      <thead><tr><th>Hora</th><th>Importe</th><th>Patente</th><th>Estado</th><th></th></tr></thead>
       <tbody id="tbody"></tbody>
     </table>
   </div>
 
-  <div class="card">
+  <div class="card no-print">
     <strong style="font-size:12px;color:#999;text-transform:uppercase;display:block;margin-bottom:10px">Informe para caja</strong>
     <div class="row2">
       <div><label>Desde</label><input type="date" id="rep-desde"></div>
       <div><label>Hasta</label><input type="date" id="rep-hasta"></div>
     </div>
     <button onclick="generarInforme()">Generar informe</button>
-    <div id="rep-cont" style="margin-top:14px"></div>
+    <button class="btn-sec" id="btn-imprimir" style="display:none" onclick="window.print()">🖨️ Imprimir informe</button>
+  </div>
+
+  <div id="print-area">
+    <div id="print-titulo"><h2>Informe El Andamio — <span id="print-fechas"></span></h2></div>
+    <div id="rep-cont"></div>
   </div>
 </div>
 
@@ -85,7 +101,7 @@ async function api(method, path, body){
   const opts = { method, headers: { 'Content-Type':'application/json', 'x-clave': CLAVE } };
   if(body) opts.body = JSON.stringify(body);
   const r = await fetch(path, opts);
-  if(r.status === 401){ alert('Clave incorrecta'); localStorage.removeItem('andamio_clave'); location.reload(); return; }
+  if(r.status === 401 && !body?.claveConfirmacion){ alert('Clave incorrecta'); localStorage.removeItem('andamio_clave'); location.reload(); return; }
   return r.json();
 }
 
@@ -101,19 +117,23 @@ async function mostrarApp(){
 async function cargar(){
   const monto = parseFloat(document.getElementById('monto').value) || 0;
   const nro = document.getElementById('nro').value.trim();
+  const patente = document.getElementById('patente').value.trim();
   if(!monto){ alert('Ingresá el importe'); return; }
   const btn = document.getElementById('btn-cargar');
   btn.disabled = true; btn.textContent = 'Verificando...';
-  await api('POST','/andamio-urgente/comprobantes', { monto, nro_operacion: nro || null });
+  await api('POST','/andamio-urgente/comprobantes', { monto, nro_operacion: nro || null, patente: patente || null });
   btn.disabled = false; btn.textContent = 'Cargar comprobante';
   document.getElementById('monto').value='';
   document.getElementById('nro').value='';
+  document.getElementById('patente').value='';
   await listar();
 }
 
 async function borrar(id){
-  if(!confirm('¿Borrar este comprobante?')) return;
-  await api('DELETE', '/andamio-urgente/comprobantes/'+id);
+  const clave = prompt('Para borrar, ingresá la clave de acceso de nuevo:');
+  if(clave === null) return;
+  const r = await api('DELETE', '/andamio-urgente/comprobantes/'+id, { claveConfirmacion: clave });
+  if(r && r.error){ alert(r.error); return; }
   await listar();
 }
 
@@ -137,13 +157,14 @@ async function listar(){
     return `<tr>
       <td>${new Date(c.fecha_hora).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}</td>
       <td>$${Math.round(c.monto).toLocaleString('es-AR')}</td>
+      <td>${c.patente||'—'}</td>
       <td>${badges[c.estado]||c.estado}</td>
       <td style="white-space:nowrap">
         ${puedeReintentar ? `<button class="icon-btn" onclick="reintentar(${c.id})" title="Reintentar">🔄</button>` : ''}
         <button class="icon-btn" onclick="borrar(${c.id})" title="Borrar">🗑️</button>
       </td>
     </tr>`;
-  }).join('') || '<tr><td colspan="4">Sin comprobantes</td></tr>';
+  }).join('') || '<tr><td colspan="5">Sin comprobantes</td></tr>';
 }
 
 async function generarInforme(){
@@ -153,9 +174,11 @@ async function generarInforme(){
   const data = await api('GET', `/andamio-urgente/reporte?desde=${desde}&hasta=${hasta}`);
   if(!data || data.error){ alert(data?.error||'Error'); return; }
   const t = data.totales;
+  document.getElementById('print-fechas').textContent = desde === hasta ? desde : `${desde} al ${hasta}`;
   const filas = data.comprobantes.map(c => `<tr>
     <td>${new Date(c.fecha_hora).toLocaleDateString('es-AR')} ${new Date(c.fecha_hora).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}</td>
     <td>$${Math.round(c.monto).toLocaleString('es-AR')}</td>
+    <td>${c.patente||'—'}</td>
     <td>${c.nro_operacion||'—'}</td>
     <td>${badges[c.estado]||c.estado}</td>
   </tr>`).join('');
@@ -169,10 +192,11 @@ async function generarInforme(){
       <div style="color:#555"><span>Pendientes</span><strong>${t.pendientes}</strong></div>
     </div>
     <table>
-      <thead><tr><th>Fecha/Hora</th><th>Importe</th><th>N° Op</th><th>Estado</th></tr></thead>
-      <tbody>${filas || '<tr><td colspan="4">Sin comprobantes en ese rango</td></tr>'}</tbody>
+      <thead><tr><th>Fecha/Hora</th><th>Importe</th><th>Patente</th><th>N° Op</th><th>Estado</th></tr></thead>
+      <tbody>${filas || '<tr><td colspan="5">Sin comprobantes en ese rango</td></tr>'}</tbody>
     </table>
   `;
+  document.getElementById('btn-imprimir').style.display = 'block';
 }
 
 if(CLAVE) mostrarApp();
