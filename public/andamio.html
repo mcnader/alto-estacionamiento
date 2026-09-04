@@ -6,21 +6,26 @@
 <title>Comprobantes El Andamio</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,sans-serif}
-  body{background:#f5f4f0;padding:16px;max-width:480px;margin:0 auto}
+  body{background:#f5f4f0;padding:16px;max-width:520px;margin:0 auto}
   h1{font-size:18px;margin-bottom:16px}
   .card{background:#fff;border:1px solid #e0dfd8;border-radius:12px;padding:16px;margin-bottom:14px}
   label{display:block;font-size:11px;font-weight:600;color:#666;margin-bottom:4px;text-transform:uppercase}
   input{width:100%;padding:10px;border:1px solid #e0dfd8;border-radius:8px;font-size:15px;margin-bottom:12px}
   button{width:100%;padding:12px;border:none;border-radius:8px;background:#1a1a18;color:#fff;font-size:15px;font-weight:600;cursor:pointer}
+  .btn-sm{width:auto;padding:6px 12px;font-size:12px}
   table{width:100%;border-collapse:collapse;font-size:13px}
   th{text-align:left;font-size:10px;color:#999;text-transform:uppercase;padding:6px 4px;border-bottom:1px solid #eee}
-  td{padding:8px 4px;border-bottom:1px solid #f5f4f0}
+  td{padding:8px 4px;border-bottom:1px solid #f5f4f0;vertical-align:middle}
   .badge{display:inline-block;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600}
   .b-gy{background:#f0f0f0;color:#555}
   .b-gr{background:#e8f5ee;color:#1a6b3c}
   .b-rd{background:#fdeaea;color:#8b2020}
   .b-am{background:#fef3db;color:#7a4f00}
+  .icon-btn{background:none;border:none;font-size:15px;cursor:pointer;padding:0 4px;width:auto}
   #clave-box{text-align:center;margin-top:60px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .tot{background:#f5f4f0;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:13px}
+  .tot div{display:flex;justify-content:space-between;margin-bottom:3px}
 </style>
 </head>
 <body>
@@ -42,18 +47,28 @@
     <input type="number" id="monto" placeholder="0">
     <label>N° operación completo, o solo los últimos 4 dígitos</label>
     <input type="text" id="nro" placeholder="Ej: 5807 o 169300365807">
-    <button onclick="cargar()">Cargar comprobante</button>
+    <button id="btn-cargar" onclick="cargar()">Cargar comprobante</button>
   </div>
 
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <strong style="font-size:12px;color:#999;text-transform:uppercase">Últimos comprobantes</strong>
-      <button style="width:auto;padding:6px 12px;font-size:12px" onclick="listar()">↻ Actualizar</button>
+      <button class="btn-sm" onclick="listar()">↻ Actualizar</button>
     </div>
     <table>
-      <thead><tr><th>Hora</th><th>Importe</th><th>Estado</th></tr></thead>
+      <thead><tr><th>Hora</th><th>Importe</th><th>Estado</th><th></th></tr></thead>
       <tbody id="tbody"></tbody>
     </table>
+  </div>
+
+  <div class="card">
+    <strong style="font-size:12px;color:#999;text-transform:uppercase;display:block;margin-bottom:10px">Informe para caja</strong>
+    <div class="row2">
+      <div><label>Desde</label><input type="date" id="rep-desde"></div>
+      <div><label>Hasta</label><input type="date" id="rep-hasta"></div>
+    </div>
+    <button onclick="generarInforme()">Generar informe</button>
+    <div id="rep-cont" style="margin-top:14px"></div>
   </div>
 </div>
 
@@ -77,6 +92,9 @@ async function api(method, path, body){
 async function mostrarApp(){
   document.getElementById('clave-box').style.display='none';
   document.getElementById('app').style.display='block';
+  const hoy = new Date().toISOString().slice(0,10);
+  document.getElementById('rep-desde').value = hoy;
+  document.getElementById('rep-hasta').value = hoy;
   await listar();
 }
 
@@ -84,9 +102,23 @@ async function cargar(){
   const monto = parseFloat(document.getElementById('monto').value) || 0;
   const nro = document.getElementById('nro').value.trim();
   if(!monto){ alert('Ingresá el importe'); return; }
+  const btn = document.getElementById('btn-cargar');
+  btn.disabled = true; btn.textContent = 'Verificando...';
   await api('POST','/andamio-urgente/comprobantes', { monto, nro_operacion: nro || null });
+  btn.disabled = false; btn.textContent = 'Cargar comprobante';
   document.getElementById('monto').value='';
   document.getElementById('nro').value='';
+  await listar();
+}
+
+async function borrar(id){
+  if(!confirm('¿Borrar este comprobante?')) return;
+  await api('DELETE', '/andamio-urgente/comprobantes/'+id);
+  await listar();
+}
+
+async function reintentar(id){
+  await api('POST', '/andamio-urgente/comprobantes/'+id+'/reintentar');
   await listar();
 }
 
@@ -100,11 +132,47 @@ const badges = {
 async function listar(){
   const lista = await api('GET','/andamio-urgente/comprobantes');
   const tbody = document.getElementById('tbody');
-  tbody.innerHTML = (lista||[]).map(c => `<tr>
-    <td>${new Date(c.fecha_hora).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}</td>
+  tbody.innerHTML = (lista||[]).map(c => {
+    const puedeReintentar = c.estado === 'sin_matchear' || c.estado === 'revisar_manual';
+    return `<tr>
+      <td>${new Date(c.fecha_hora).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}</td>
+      <td>$${Math.round(c.monto).toLocaleString('es-AR')}</td>
+      <td>${badges[c.estado]||c.estado}</td>
+      <td style="white-space:nowrap">
+        ${puedeReintentar ? `<button class="icon-btn" onclick="reintentar(${c.id})" title="Reintentar">🔄</button>` : ''}
+        <button class="icon-btn" onclick="borrar(${c.id})" title="Borrar">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="4">Sin comprobantes</td></tr>';
+}
+
+async function generarInforme(){
+  const desde = document.getElementById('rep-desde').value;
+  const hasta = document.getElementById('rep-hasta').value;
+  if(!desde || !hasta){ alert('Completá ambas fechas'); return; }
+  const data = await api('GET', `/andamio-urgente/reporte?desde=${desde}&hasta=${hasta}`);
+  if(!data || data.error){ alert(data?.error||'Error'); return; }
+  const t = data.totales;
+  const filas = data.comprobantes.map(c => `<tr>
+    <td>${new Date(c.fecha_hora).toLocaleDateString('es-AR')} ${new Date(c.fecha_hora).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}</td>
     <td>$${Math.round(c.monto).toLocaleString('es-AR')}</td>
+    <td>${c.nro_operacion||'—'}</td>
     <td>${badges[c.estado]||c.estado}</td>
-  </tr>`).join('') || '<tr><td colspan="3">Sin comprobantes</td></tr>';
+  </tr>`).join('');
+  document.getElementById('rep-cont').innerHTML = `
+    <div class="tot">
+      <div><span>Total comprobantes</span><strong>${t.cantidad}</strong></div>
+      <div><span>Monto total cargado</span><strong>$${Math.round(t.total).toLocaleString('es-AR')}</strong></div>
+      <div style="color:#1a6b3c"><span>Verificados (${t.verificados})</span><strong>$${Math.round(t.totalVerificado).toLocaleString('es-AR')}</strong></div>
+      <div style="color:#8b2020"><span>Sin matchear</span><strong>${t.sinMatchear}</strong></div>
+      <div style="color:#7a4f00"><span>A revisar manual</span><strong>${t.revisarManual}</strong></div>
+      <div style="color:#555"><span>Pendientes</span><strong>${t.pendientes}</strong></div>
+    </div>
+    <table>
+      <thead><tr><th>Fecha/Hora</th><th>Importe</th><th>N° Op</th><th>Estado</th></tr></thead>
+      <tbody>${filas || '<tr><td colspan="4">Sin comprobantes en ese rango</td></tr>'}</tbody>
+    </table>
+  `;
 }
 
 if(CLAVE) mostrarApp();
