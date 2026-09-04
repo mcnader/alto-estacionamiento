@@ -147,4 +147,4 @@ function iniciar() {
   }, INTERVALO_MS);
 }
 
-module.exports = { router, iniciar };
+module.exports = { router, iniciar, conciliarPendientes };
