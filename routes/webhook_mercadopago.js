@@ -3,6 +3,12 @@
  *
  * Webhook para la sucursal EL ANDAMIO (piloto).
  * Usa el mismo pool de conexión (db/database.js) que el resto del sistema.
+ *
+ * IMPORTANTE: Mercado Pago tiene dos formatos de notificación:
+ *   - Nuevo (webhooks v2): POST con JSON body { type: "payment", data: { id } }
+ *   - Legacy (IPN):        POST o GET con query params ?topic=payment&id=123
+ * Este handler soporta ambos, y logea cada request que entra para poder
+ * diagnosticar qué está mandando MP realmente.
  */
 
 const express = require('express');
@@ -13,14 +19,35 @@ const MP_ACCESS_TOKEN_ANDAMIO = process.env.MP_ACCESS_TOKEN_ANDAMIO;
 const SUCURSAL_ID_ANDAMIO = 3; // El Andamio, según tu tabla `sucursales`
 const VENTANA_MINUTOS = 15;
 
-router.post('/webhook/mercadopago/andamio', async (req, res) => {
+async function manejarNotificacion(req, res) {
   res.sendStatus(200); // respondemos ya, MP reintenta si tardamos
 
-  try {
-    const { type, data } = req.body;
-    if (type !== 'payment') return;
+  // --- LOG DE DIAGNÓSTICO: sacar una vez que confirmemos que anda ---
+  console.log('[MP webhook] request recibido:', {
+    method: req.method,
+    query: req.query,
+    body: req.body,
+  });
 
-    const pago = await consultarPago(data.id, MP_ACCESS_TOKEN_ANDAMIO);
+  try {
+    // Formato nuevo (JSON body)
+    let tipo = req.body?.type;
+    let paymentId = req.body?.data?.id;
+
+    // Formato legacy (query params)
+    if (!paymentId) {
+      tipo = req.query?.topic || tipo;
+      paymentId = req.query?.id || req.body?.resource;
+    }
+
+    if (tipo !== 'payment' || !paymentId) {
+      console.log('[MP webhook] ignorado — tipo:', tipo, 'paymentId:', paymentId);
+      return;
+    }
+
+    const pago = await consultarPago(paymentId, MP_ACCESS_TOKEN_ANDAMIO);
+    console.log('[MP webhook] pago consultado:', pago.id, pago.status, pago.transaction_amount);
+
     if (pago.status !== 'approved') return;
 
     await guardarMovimiento({
@@ -34,12 +61,16 @@ router.post('/webhook/mercadopago/andamio', async (req, res) => {
         : null,
     });
 
+    console.log('[MP webhook] movimiento guardado, corriendo conciliación...');
     await conciliarPendientes(SUCURSAL_ID_ANDAMIO);
 
   } catch (err) {
-    console.error('Error procesando webhook de Mercado Pago:', err);
+    console.error('[MP webhook] Error procesando notificación:', err);
   }
-});
+}
+
+router.post('/webhook/mercadopago/andamio', manejarNotificacion);
+router.get('/webhook/mercadopago/andamio', manejarNotificacion); // por si MP usa GET en modo legacy
 
 async function consultarPago(paymentId, accessToken) {
   const resp = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
@@ -60,10 +91,6 @@ async function guardarMovimiento(datos) {
   );
 }
 
-/**
- * Recorre los comprobantes pendientes de la sucursal e intenta matchearlos
- * contra movimientos no usados (misma lógica que matching_engine.py).
- */
 async function conciliarPendientes(sucursalId) {
   const pool = getDb();
 
@@ -73,7 +100,6 @@ async function conciliarPendientes(sucursalId) {
   );
 
   for (const comprobante of pendientes) {
-    // 1. Match exacto por número de operación
     if (comprobante.nro_operacion) {
       const { rows: exactos } = await pool.query(
         `SELECT * FROM movimientos_bancarios
@@ -86,7 +112,6 @@ async function conciliarPendientes(sucursalId) {
       }
     }
 
-    // 2. Match por monto + ventana de tiempo
     const { rows: candidatos } = await pool.query(
       `SELECT * FROM movimientos_bancarios
        WHERE sucursal_id=$1 AND monto=$2 AND usado=false
