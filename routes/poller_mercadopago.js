@@ -101,7 +101,7 @@ async function ejecutarCicloPolling() {
   for (const pago of pagos) {
     if (await guardarMovimiento(pago)) nuevos++;
   }
-  if (nuevos > 0) await conciliarPendientes();
+ await conciliarPendientes();
   return { totalEncontrados: pagos.length, nuevos };
 }
 
