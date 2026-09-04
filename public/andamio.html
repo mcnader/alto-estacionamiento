@@ -27,10 +27,26 @@
   .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .tot{background:#f5f4f0;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:13px}
   .tot div{display:flex;justify-content:space-between;margin-bottom:3px}
+
   #print-area{display:none}
   @media print{
     body>*:not(#print-area){display:none!important}
-    #print-area{display:block!important}
+    #print-area{
+      display:block!important;
+      font-family:monospace;
+      font-size:9pt;
+      width:100%;
+      padding:0 2mm;
+    }
+    @page{ size: 80mm auto; margin: 2mm 0; }
+    .p-logo{font-size:11pt;font-weight:700;border-bottom:1px dashed #000;padding-bottom:4pt;margin-bottom:6pt;text-align:center}
+    .p-sub{font-size:8pt;text-align:center;margin-bottom:6pt}
+    .p-linea{display:flex;justify-content:space-between;margin-bottom:3pt}
+    .p-sep{border-top:1px dashed #000;margin:6pt 0}
+    .p-item{margin-bottom:5pt;padding-bottom:5pt;border-bottom:1px dotted #ccc}
+    .p-item .fila1{display:flex;justify-content:space-between;font-weight:700}
+    .p-item .fila2{font-size:8pt;color:#333}
+    .p-total{font-size:11pt;font-weight:700;display:flex;justify-content:space-between;margin-top:6pt}
   }
 </style>
 </head>
@@ -76,18 +92,12 @@
       <div><label>Hasta</label><input type="datetime-local" id="rep-hasta"></div>
     </div>
     <button onclick="generarInforme()">Generar informe</button>
-    <button class="btn-sec" id="btn-imprimir" style="display:none" onclick="window.print()">🖨️ Imprimir informe</button>
+    <button class="btn-sec" id="btn-imprimir" style="display:none" onclick="window.print()">🖨️ Imprimir informe (rollo 80mm)</button>
     <div id="rep-cont" style="margin-top:14px"></div>
   </div>
 </div>
 
-<!-- IMPORTANTE: este bloque va FUERA de #app, como hermano directo del body,
-     para que la regla de impresión (que oculta todo salvo #print-area) no lo
-     esconda por estar dentro de un padre oculto. -->
-<div id="print-area">
-  <h2>Informe El Andamio — <span id="print-fechas"></span></h2>
-  <div id="print-cont"></div>
-</div>
+<div id="print-area"></div>
 
 <script>
 let CLAVE = localStorage.getItem('andamio_clave') || '';
@@ -158,6 +168,13 @@ const badges = {
   revisar_manual: '<span class="badge b-am">Revisar manual</span>',
 };
 
+const estadoCorto = {
+  pendiente: 'Pendiente',
+  verificado: 'OK',
+  sin_matchear: 'SIN MATCH',
+  revisar_manual: 'REVISAR',
+};
+
 async function listar(){
   const lista = await api('GET','/andamio-urgente/comprobantes');
   const tbody = document.getElementById('tbody');
@@ -189,9 +206,9 @@ async function generarInforme(){
   if(!data || data.error){ alert(data?.error||'Error'); return; }
   const t = data.totales;
   const fmt = s => new Date(s).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-  document.getElementById('print-fechas').textContent = `${fmt(desde)} — ${fmt(hasta)}`;
+  const fechasTexto = `${fmt(desde)} — ${fmt(hasta)}`;
 
-  const filas = data.comprobantes.map(c => `<tr>
+  const filasPantalla = data.comprobantes.map(c => `<tr>
     <td>${new Date(c.fecha_hora).toLocaleDateString('es-AR')} ${new Date(c.fecha_hora).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}</td>
     <td>$${Math.round(c.monto).toLocaleString('es-AR')}</td>
     <td>${c.patente||'—'}</td>
@@ -199,7 +216,7 @@ async function generarInforme(){
     <td>${badges[c.estado]||c.estado}</td>
   </tr>`).join('');
 
-  const html = `
+  document.getElementById('rep-cont').innerHTML = `
     <div class="tot">
       <div><span>Total comprobantes</span><strong>${t.cantidad}</strong></div>
       <div><span>Monto total cargado</span><strong>$${Math.round(t.total).toLocaleString('es-AR')}</strong></div>
@@ -210,14 +227,32 @@ async function generarInforme(){
     </div>
     <table>
       <thead><tr><th>Fecha/Hora</th><th>Importe</th><th>Patente</th><th>N° Op</th><th>Estado</th></tr></thead>
-      <tbody>${filas || '<tr><td colspan="5">Sin comprobantes en ese rango</td></tr>'}</tbody>
+      <tbody>${filasPantalla || '<tr><td colspan="5">Sin comprobantes en ese rango</td></tr>'}</tbody>
     </table>
   `;
 
-  // Se pinta en los dos lugares: en pantalla (rep-cont) y en el bloque de
-  // impresión (print-cont), que vive fuera de #app.
-  document.getElementById('rep-cont').innerHTML = html;
-  document.getElementById('print-cont').innerHTML = html;
+  const itemsTicket = data.comprobantes.map(c => `
+    <div class="p-item">
+      <div class="fila1"><span>${new Date(c.fecha_hora).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}</span><span>$${Math.round(c.monto).toLocaleString('es-AR')}</span></div>
+      <div class="fila2">${c.patente ? 'Pat: '+c.patente+' · ' : ''}${estadoCorto[c.estado]||c.estado}${c.nro_operacion ? ' · N° '+c.nro_operacion : ''}</div>
+    </div>
+  `).join('') || '<div>Sin comprobantes en ese rango</div>';
+
+  document.getElementById('print-area').innerHTML = `
+    <div class="p-logo">EL ANDAMIO</div>
+    <div class="p-sub">${fechasTexto}</div>
+    <div class="p-sep"></div>
+    ${itemsTicket}
+    <div class="p-sep"></div>
+    <div class="p-linea"><span>Cantidad</span><span>${t.cantidad}</span></div>
+    <div class="p-linea"><span>Verificados</span><span>${t.verificados}</span></div>
+    <div class="p-linea"><span>Sin matchear</span><span>${t.sinMatchear}</span></div>
+    <div class="p-linea"><span>A revisar</span><span>${t.revisarManual}</span></div>
+    <div class="p-sep"></div>
+    <div class="p-total"><span>TOTAL VERIF.</span><span>$${Math.round(t.totalVerificado).toLocaleString('es-AR')}</span></div>
+    <div class="p-total"><span>TOTAL CARGADO</span><span>$${Math.round(t.total).toLocaleString('es-AR')}</span></div>
+  `;
+
   document.getElementById('btn-imprimir').style.display = 'block';
 }
 
