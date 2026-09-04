@@ -61,34 +61,53 @@ async function guardarMovimiento(pago) {
 
 async function conciliarPendientes() {
   const pool = getDb();
+  const VENTANA_MINUTOS = 15;
+
   const { rows: pendientes } = await pool.query(
     `SELECT * FROM comprobantes_transferencia WHERE sucursal_id=$1 AND estado='pendiente'`,
     [SUCURSAL_ID_ANDAMIO]
   );
 
   for (const comprobante of pendientes) {
-    if (comprobante.nro_operacion) {
-      const { rows: exactos } = await pool.query(
+    const nro = (comprobante.nro_operacion || '').trim();
+    let matcheado = false;
+
+    if (nro.length >= 6) {
+      const { rows } = await pool.query(
         `SELECT * FROM movimientos_bancarios WHERE sucursal_id=$1 AND nro_transaccion=$2 AND usado=false LIMIT 1`,
-        [SUCURSAL_ID_ANDAMIO, comprobante.nro_operacion]
+        [SUCURSAL_ID_ANDAMIO, nro]
       );
-      if (exactos.length) { await marcarVerificado(comprobante.id, exactos[0].id); continue; }
+      if (rows.length) { await marcarVerificado(comprobante.id, rows[0].id); matcheado = true; }
     }
 
-    const { rows: candidatos } = await pool.query(
-      `SELECT * FROM movimientos_bancarios
-       WHERE sucursal_id=$1 AND monto=$2 AND usado=false
-         AND fecha_hora BETWEEN $3::timestamptz - ($4 || ' minutes')::interval
-                             AND $3::timestamptz + ($4 || ' minutes')::interval`,
-      [SUCURSAL_ID_ANDAMIO, comprobante.monto, comprobante.fecha_hora, VENTANA_MINUTOS]
-    );
+    if (!matcheado && nro.length === 4 && /^\d{4}$/.test(nro)) {
+      const { rows } = await pool.query(
+        `SELECT * FROM movimientos_bancarios
+         WHERE sucursal_id=$1 AND usado=false AND monto=$2 AND RIGHT(nro_transaccion, 4) = $3`,
+        [SUCURSAL_ID_ANDAMIO, comprobante.monto, nro]
+      );
+      if (rows.length === 1) { await marcarVerificado(comprobante.id, rows[0].id); matcheado = true; }
+      else if (rows.length > 1) {
+        await pool.query(`UPDATE comprobantes_transferencia SET estado='revisar_manual' WHERE id=$1`, [comprobante.id]);
+        matcheado = true;
+      }
+    }
 
-    if (candidatos.length === 1) await marcarVerificado(comprobante.id, candidatos[0].id);
-    else if (candidatos.length === 0) await pool.query(`UPDATE comprobantes_transferencia SET estado='sin_matchear' WHERE id=$1`, [comprobante.id]);
-    else await pool.query(`UPDATE comprobantes_transferencia SET estado='revisar_manual' WHERE id=$1`, [comprobante.id]);
+    if (!matcheado) {
+      const { rows: candidatos } = await pool.query(
+        `SELECT * FROM movimientos_bancarios
+         WHERE sucursal_id=$1 AND monto=$2 AND usado=false
+           AND fecha_hora BETWEEN $3::timestamptz - ($4 || ' minutes')::interval
+                               AND $3::timestamptz + ($4 || ' minutes')::interval`,
+        [SUCURSAL_ID_ANDAMIO, comprobante.monto, comprobante.fecha_hora, VENTANA_MINUTOS]
+      );
+
+      if (candidatos.length === 1) await marcarVerificado(comprobante.id, candidatos[0].id);
+      else if (candidatos.length === 0) await pool.query(`UPDATE comprobantes_transferencia SET estado='sin_matchear' WHERE id=$1`, [comprobante.id]);
+      else await pool.query(`UPDATE comprobantes_transferencia SET estado='revisar_manual' WHERE id=$1`, [comprobante.id]);
+    }
   }
 }
-
 async function marcarVerificado(comprobanteId, movimientoId) {
   const pool = getDb();
   await pool.query(`UPDATE movimientos_bancarios SET usado=true WHERE id=$1`, [movimientoId]);
