@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { getDb } = require('../db/database');
-const { conciliarPendientes } = require('./poller_mercadopago');
+const { conciliarPendientes, ejecutarCicloPolling } = require('./poller_mercadopago');
 
 const SUCURSAL_ID_ANDAMIO = 3;
 const CLAVE = process.env.ANDAMIO_CLAVE_URGENTE || 'andamio2026';
@@ -12,6 +12,8 @@ function chequearClave(req, res, next) {
   next();
 }
 
+// Al cargar, primero le preguntamos a MP si hay algo nuevo (no solo miramos
+// lo que ya teníamos guardado) — reduce el margen de "sin matchear" por timing.
 router.post('/andamio-urgente/comprobantes', chequearClave, async (req, res) => {
   try {
     const pool = getDb();
@@ -26,7 +28,8 @@ router.post('/andamio-urgente/comprobantes', chequearClave, async (req, res) => 
       [SUCURSAL_ID_ANDAMIO, monto, nro_operacion || null]
     );
 
-    await conciliarPendientes();
+    await ejecutarCicloPolling(); // busca en MP + guarda + concilia, todo junto
+
     const { rows: actualizado } = await pool.query(
       `SELECT * FROM comprobantes_transferencia WHERE id=$1`, [rows[0].id]
     );
@@ -47,6 +50,91 @@ router.get('/andamio-urgente/comprobantes', chequearClave, async (req, res) => {
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: 'Error al listar' });
+  }
+});
+
+router.delete('/andamio-urgente/comprobantes/:id', chequearClave, async (req, res) => {
+  try {
+    const pool = getDb();
+    const { id } = req.params;
+
+    const { rows } = await pool.query(
+      `SELECT * FROM comprobantes_transferencia WHERE id=$1 AND sucursal_id=$2`,
+      [id, SUCURSAL_ID_ANDAMIO]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'No encontrado' });
+
+    if (rows[0].movimiento_id) {
+      await pool.query(`UPDATE movimientos_bancarios SET usado=false WHERE id=$1`, [rows[0].movimiento_id]);
+    }
+    await pool.query(`DELETE FROM comprobantes_transferencia WHERE id=$1`, [id]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Error borrando comprobante:', err);
+    res.status(500).json({ error: 'Error al borrar' });
+  }
+});
+
+// --- Reintentar: vuelve el comprobante a 'pendiente' y corre el matching de nuevo ---
+router.post('/andamio-urgente/comprobantes/:id/reintentar', chequearClave, async (req, res) => {
+  try {
+    const pool = getDb();
+    const { id } = req.params;
+
+    const { rows } = await pool.query(
+      `SELECT * FROM comprobantes_transferencia WHERE id=$1 AND sucursal_id=$2`,
+      [id, SUCURSAL_ID_ANDAMIO]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'No encontrado' });
+
+    // Si por error ya había quedado con un movimiento asociado, lo liberamos primero
+    if (rows[0].movimiento_id) {
+      await pool.query(`UPDATE movimientos_bancarios SET usado=false WHERE id=$1`, [rows[0].movimiento_id]);
+    }
+    await pool.query(
+      `UPDATE comprobantes_transferencia SET estado='pendiente', movimiento_id=NULL WHERE id=$1`,
+      [id]
+    );
+
+    await ejecutarCicloPolling();
+
+    const { rows: actualizado } = await pool.query(`SELECT * FROM comprobantes_transferencia WHERE id=$1`, [id]);
+    res.json(actualizado[0]);
+  } catch (err) {
+    console.error('Error reintentando comprobante:', err);
+    res.status(500).json({ error: 'Error al reintentar' });
+  }
+});
+
+router.get('/andamio-urgente/reporte', chequearClave, async (req, res) => {
+  try {
+    const pool = getDb();
+    const { desde, hasta } = req.query;
+    if (!desde || !hasta) return res.status(400).json({ error: 'Faltan fechas desde/hasta' });
+
+    const { rows } = await pool.query(
+      `SELECT * FROM comprobantes_transferencia
+       WHERE sucursal_id=$1
+         AND fecha_hora >= $2::date
+         AND fecha_hora < ($3::date + interval '1 day')
+       ORDER BY fecha_hora ASC`,
+      [SUCURSAL_ID_ANDAMIO, desde, hasta]
+    );
+
+    const totales = rows.reduce((acc, c) => {
+      acc.cantidad++;
+      acc.total += parseFloat(c.monto);
+      if (c.estado === 'verificado') { acc.verificados++; acc.totalVerificado += parseFloat(c.monto); }
+      else if (c.estado === 'sin_matchear') acc.sinMatchear++;
+      else if (c.estado === 'revisar_manual') acc.revisarManual++;
+      else acc.pendientes++;
+      return acc;
+    }, { cantidad:0, total:0, verificados:0, totalVerificado:0, sinMatchear:0, revisarManual:0, pendientes:0 });
+
+    res.json({ comprobantes: rows, totales });
+  } catch (err) {
+    console.error('Error generando reporte:', err);
+    res.status(500).json({ error: 'Error al generar el informe' });
   }
 });
 
