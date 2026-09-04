@@ -10,6 +10,7 @@ app.use(session({secret:'altoE_2024',resave:false,saveUninitialized:false,cookie
 app.use(express.static(path.join(__dirname,'public')));
 app.use('/api/auth',require('./routes/auth'));
 app.use('/api',require('./routes/api'));
+app.use('/api',require('./routes/comprobantes'));
 const pollerMP = require('./routes/poller_mercadopago');
 app.use('/api', pollerMP.router);
 pollerMP.iniciar();
