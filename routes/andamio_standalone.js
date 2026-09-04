@@ -12,23 +12,21 @@ function chequearClave(req, res, next) {
   next();
 }
 
-// Al cargar, primero le preguntamos a MP si hay algo nuevo (no solo miramos
-// lo que ya teníamos guardado) — reduce el margen de "sin matchear" por timing.
 router.post('/andamio-urgente/comprobantes', chequearClave, async (req, res) => {
   try {
     const pool = getDb();
-    const { monto, nro_operacion } = req.body;
+    const { monto, nro_operacion, patente } = req.body;
     if (!monto || monto <= 0) return res.status(400).json({ error: 'Importe inválido' });
 
     const { rows } = await pool.query(
       `INSERT INTO comprobantes_transferencia
-         (sucursal_id, monto, fecha_hora, nro_operacion, cargado_por, estado)
-       VALUES ($1,$2,now(),$3,'Apartado urgente','pendiente')
+         (sucursal_id, monto, fecha_hora, nro_operacion, patente, cargado_por, estado)
+       VALUES ($1,$2,now(),$3,$4,'Apartado urgente','pendiente')
        RETURNING *`,
-      [SUCURSAL_ID_ANDAMIO, monto, nro_operacion || null]
+      [SUCURSAL_ID_ANDAMIO, monto, nro_operacion || null, (patente || '').toUpperCase() || null]
     );
 
-    await ejecutarCicloPolling(); // busca en MP + guarda + concilia, todo junto
+    await ejecutarCicloPolling();
 
     const { rows: actualizado } = await pool.query(
       `SELECT * FROM comprobantes_transferencia WHERE id=$1`, [rows[0].id]
@@ -53,8 +51,14 @@ router.get('/andamio-urgente/comprobantes', chequearClave, async (req, res) => {
   }
 });
 
+// --- Borrar: exige la clave otra vez en el body (no solo el header guardado) ---
+// Así, aunque la clave esté guardada en el celular, hay que volver a tipearla
+// a propósito para borrar algo — reduce los borrados accidentales.
 router.delete('/andamio-urgente/comprobantes/:id', chequearClave, async (req, res) => {
   try {
+    const { claveConfirmacion } = req.body || {};
+    if (claveConfirmacion !== CLAVE) return res.status(401).json({ error: 'Clave de confirmación incorrecta' });
+
     const pool = getDb();
     const { id } = req.params;
 
@@ -75,7 +79,6 @@ router.delete('/andamio-urgente/comprobantes/:id', chequearClave, async (req, re
   }
 });
 
-// --- Reintentar: vuelve el comprobante a 'pendiente' y corre el matching de nuevo ---
 router.post('/andamio-urgente/comprobantes/:id/reintentar', chequearClave, async (req, res) => {
   try {
     const pool = getDb();
@@ -87,7 +90,6 @@ router.post('/andamio-urgente/comprobantes/:id/reintentar', chequearClave, async
     );
     if (!rows.length) return res.status(404).json({ error: 'No encontrado' });
 
-    // Si por error ya había quedado con un movimiento asociado, lo liberamos primero
     if (rows[0].movimiento_id) {
       await pool.query(`UPDATE movimientos_bancarios SET usado=false WHERE id=$1`, [rows[0].movimiento_id]);
     }
@@ -131,7 +133,7 @@ router.get('/andamio-urgente/reporte', chequearClave, async (req, res) => {
       return acc;
     }, { cantidad:0, total:0, verificados:0, totalVerificado:0, sinMatchear:0, revisarManual:0, pendientes:0 });
 
-    res.json({ comprobantes: rows, totales });
+    res.json({ comprobantes: rows, totales, desde, hasta });
   } catch (err) {
     console.error('Error generando reporte:', err);
     res.status(500).json({ error: 'Error al generar el informe' });
