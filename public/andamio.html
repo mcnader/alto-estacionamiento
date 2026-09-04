@@ -27,13 +27,10 @@
   .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .tot{background:#f5f4f0;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:13px}
   .tot div{display:flex;justify-content:space-between;margin-bottom:3px}
-  #print-titulo{display:none}
+  #print-area{display:none}
   @media print{
     body>*:not(#print-area){display:none!important}
     #print-area{display:block!important}
-    #print-titulo{display:block!important;margin-bottom:10px}
-    .no-print{display:none!important}
-    button{display:none!important}
   }
 </style>
 </head>
@@ -72,7 +69,7 @@
     </table>
   </div>
 
-  <div class="card no-print">
+  <div class="card">
     <strong style="font-size:12px;color:#999;text-transform:uppercase;display:block;margin-bottom:10px">Informe para caja (por turno)</strong>
     <div class="row2">
       <div><label>Desde</label><input type="datetime-local" id="rep-desde"></div>
@@ -80,12 +77,16 @@
     </div>
     <button onclick="generarInforme()">Generar informe</button>
     <button class="btn-sec" id="btn-imprimir" style="display:none" onclick="window.print()">🖨️ Imprimir informe</button>
+    <div id="rep-cont" style="margin-top:14px"></div>
   </div>
+</div>
 
-  <div id="print-area">
-    <div id="print-titulo"><h2>Informe El Andamio — <span id="print-fechas"></span></h2></div>
-    <div id="rep-cont"></div>
-  </div>
+<!-- IMPORTANTE: este bloque va FUERA de #app, como hermano directo del body,
+     para que la regla de impresión (que oculta todo salvo #print-area) no lo
+     esconda por estar dentro de un padre oculto. -->
+<div id="print-area">
+  <h2>Informe El Andamio — <span id="print-fechas"></span></h2>
+  <div id="print-cont"></div>
 </div>
 
 <script>
@@ -109,7 +110,6 @@ async function mostrarApp(){
   document.getElementById('clave-box').style.display='none';
   document.getElementById('app').style.display='block';
 
-  // Valores por defecto del rango: desde las 00:00 de HOY (hora local) hasta ahora.
   const ahora = new Date();
   const inicioHoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), 0, 0);
   document.getElementById('rep-desde').value = toLocalInputValue(inicioHoy);
@@ -118,8 +118,6 @@ async function mostrarApp(){
   await listar();
 }
 
-// Convierte un objeto Date a texto "YYYY-MM-DDTHH:mm" en hora LOCAL
-// (para precargar el valor de un <input type="datetime-local">).
 function toLocalInputValue(date){
   const pad = n => String(n).padStart(2,'0');
   return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
@@ -184,10 +182,6 @@ async function generarInforme(){
   const hastaInput = document.getElementById('rep-hasta').value;
   if(!desdeInput || !hastaInput){ alert('Completá ambas fechas'); return; }
 
-  // OJO: el input datetime-local no lleva zona horaria. new Date(desdeInput)
-  // lo interpreta como hora LOCAL del celular (correcto), y toISOString()
-  // lo convierte a UTC con 'Z' explícito, para que el servidor lo entienda
-  // sin ambigüedad, sea cual sea su propia zona horaria.
   const desde = new Date(desdeInput).toISOString();
   const hasta = new Date(hastaInput).toISOString();
 
@@ -196,6 +190,7 @@ async function generarInforme(){
   const t = data.totales;
   const fmt = s => new Date(s).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
   document.getElementById('print-fechas').textContent = `${fmt(desde)} — ${fmt(hasta)}`;
+
   const filas = data.comprobantes.map(c => `<tr>
     <td>${new Date(c.fecha_hora).toLocaleDateString('es-AR')} ${new Date(c.fecha_hora).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})}</td>
     <td>$${Math.round(c.monto).toLocaleString('es-AR')}</td>
@@ -203,7 +198,8 @@ async function generarInforme(){
     <td>${c.nro_operacion||'—'}</td>
     <td>${badges[c.estado]||c.estado}</td>
   </tr>`).join('');
-  document.getElementById('rep-cont').innerHTML = `
+
+  const html = `
     <div class="tot">
       <div><span>Total comprobantes</span><strong>${t.cantidad}</strong></div>
       <div><span>Monto total cargado</span><strong>$${Math.round(t.total).toLocaleString('es-AR')}</strong></div>
@@ -217,6 +213,11 @@ async function generarInforme(){
       <tbody>${filas || '<tr><td colspan="5">Sin comprobantes en ese rango</td></tr>'}</tbody>
     </table>
   `;
+
+  // Se pinta en los dos lugares: en pantalla (rep-cont) y en el bloque de
+  // impresión (print-cont), que vive fuera de #app.
+  document.getElementById('rep-cont').innerHTML = html;
+  document.getElementById('print-cont').innerHTML = html;
   document.getElementById('btn-imprimir').style.display = 'block';
 }
 
