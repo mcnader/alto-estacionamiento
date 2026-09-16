@@ -16,6 +16,11 @@ app.use('/api', pollerMP.router);
 pollerMP.iniciar();
 app.use(require('./routes/webhook_mercadopago'));
 app.use(require('./routes/andamio_standalone'));
+
+// Ruta liviana para servicios de "mantener despierto" (cron-job.org, UptimeRobot, etc.)
+// Devuelve casi nada, para no chocar con los límites de tamaño de esos servicios.
+app.get('/ping', (req, res) => res.send('ok'));
+
 app.use((req,res)=>res.sendFile(path.join(__dirname,'public','index.html')));
 
 const PORT=process.env.PORT||3000;
